@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Play, Download, Heart } from 'lucide-react';
 import { useAuth, useFavoritesHook, removeFavorite } from '../services/auth';
-import type { FavoriteItem } from '../services/auth';
 
 type Tab = 'all' | 'video' | 'music';
 
