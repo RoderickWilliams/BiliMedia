@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Search, Play, Download, Heart, Trash2 } from 'lucide-react';
-import { useAuth, getMusicHistory, removeMusicRecord, isFavorited, addFavorite } from '../services/auth';
+import { useAuth, useMusicHistoryHook, removeMusicRecord, isFavorited, addFavorite } from '../services/auth';
 import type { MusicRecord } from '../services/auth';
 
 function formatDate(ts: number): string {
@@ -10,13 +10,11 @@ function formatDate(ts: number): string {
 
 export default function MusicHistory() {
   const { user, isLoggedIn } = useAuth();
-  const [records, setRecords] = useState<MusicRecord[]>([]);
+  const records = useMusicHistoryHook();
   const [search, setSearch] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user) setRecords(getMusicHistory(user.id));
-  }, [user]);
+  const [busyDel, setBusyDel] = useState<string | null>(null);
+  const [busyFav, setBusyFav] = useState<string | null>(null);
 
   if (!isLoggedIn || !user) {
     return (
@@ -32,11 +30,7 @@ export default function MusicHistory() {
     !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.artists.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handlePlay = (rec: MusicRecord) => {
-    if (!rec.mp3Url) return;
-    window.open(rec.mp3Url, '_blank');
-  };
-
+  const handlePlay = (rec: MusicRecord) => { if (rec.mp3Url) window.open(rec.mp3Url, '_blank'); };
   const handleDownload = (rec: MusicRecord) => {
     if (!rec.mp3Url) return;
     const a = document.createElement('a');
@@ -47,36 +41,36 @@ export default function MusicHistory() {
     a.click();
     document.body.removeChild(a);
   };
-
-  const handleFavorite = (rec: MusicRecord) => {
+  const handleFavorite = async (rec: MusicRecord) => {
     if (isFavorited(user.id, 'music', String(rec.id))) return;
-    addFavorite({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      userId: user.id,
-      type: 'music',
-      targetId: String(rec.id),
-      title: rec.name,
-      thumbnail: rec.cover,
-      url: rec.mp3Url || '',
-      artist: rec.artists,
-      duration: rec.duration,
-      createdAt: Date.now(),
-    });
+    setBusyFav(rec.id);
+    try {
+      await addFavorite({
+        id: '',
+        userId: user.id,
+        type: 'music',
+        targetId: String(rec.id),
+        title: rec.name,
+        thumbnail: rec.cover,
+        url: rec.mp3Url || '',
+        artist: rec.artists,
+        duration: rec.duration,
+        createdAt: Date.now(),
+      });
+    } finally { setBusyFav(null); }
   };
-
-  const handleDelete = (id: string) => {
-    removeMusicRecord(user.id, id);
-    setRecords(getMusicHistory(user.id));
-    setConfirmDelete(null);
+  const handleDelete = async (id: string) => {
+    setBusyDel(id);
+    try { await removeMusicRecord(user.id, id); }
+    finally { setBusyDel(null); setConfirmDelete(null); }
   };
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-5 sm:px-8 py-8">
-      {/* 标题 */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[26px] font-bold text-[color:var(--color-txt-1)]">音乐识别历史</h1>
-          <p className="text-[14px] text-[color:var(--color-txt-2)] mt-1">你识别过的音乐都会保存在这里</p>
+          <p className="text-[14px] text-[color:var(--color-txt-2)] mt-1">你识别过的音乐都会保存在这里（多入口同步）</p>
         </div>
         <div className="relative">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -89,7 +83,6 @@ export default function MusicHistory() {
         </div>
       </div>
 
-      {/* 空状态 */}
       {filtered.length === 0 ? (
         <div className="text-center py-20">
           <div className="text-[60px] mb-4">🎵</div>
@@ -97,14 +90,9 @@ export default function MusicHistory() {
           <div className="text-[14px] text-gray-500">在首页解析视频时会自动识别背景音乐</div>
         </div>
       ) : (
-        /* 列表 */
         <div className="space-y-2">
           {filtered.map((rec) => (
-            <div
-              key={rec.id}
-              className="card p-3 flex items-center gap-4 hover:shadow-md transition"
-            >
-              {/* 封面 */}
+            <div key={rec.id} className="card p-3 flex items-center gap-4 hover:shadow-md transition">
               <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-gray-200">
                 {rec.cover ? (
                   <img src={rec.cover} alt="" className="w-full h-full object-cover" />
@@ -112,15 +100,9 @@ export default function MusicHistory() {
                   <div className="w-full h-full flex items-center justify-center text-gray-400 text-xl">🎵</div>
                 )}
               </div>
-
-              {/* 信息 */}
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-[14.5px] text-[color:var(--color-txt-1)] truncate">
-                  {rec.name}
-                </div>
-                <div className="text-[12px] text-gray-500 mt-0.5 truncate">
-                  {rec.artists} · {rec.album}
-                </div>
+                <div className="font-medium text-[14.5px] text-[color:var(--color-txt-1)] truncate">{rec.name}</div>
+                <div className="text-[12px] text-gray-500 mt-0.5 truncate">{rec.artists} · {rec.album}</div>
                 <div className="text-[11.5px] text-gray-400 mt-0.5 truncate flex items-center gap-2">
                   <span>来源: {rec.videoTitle}</span>
                   <span>·</span>
@@ -131,8 +113,6 @@ export default function MusicHistory() {
                   </span>
                 </div>
               </div>
-
-              {/* 操作 */}
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   className="p-2 rounded-lg hover:bg-indigo-50 text-gray-500 hover:text-indigo-500 transition"
@@ -151,16 +131,18 @@ export default function MusicHistory() {
                   <Download size={16} />
                 </button>
                 <button
-                  className="p-2 rounded-lg hover:bg-pink-50 text-gray-500 hover:text-pink-500 transition"
+                  className={`p-2 rounded-lg hover:bg-pink-50 text-gray-500 hover:text-pink-500 transition ${busyFav === rec.id ? 'opacity-60' : ''}`}
                   onClick={() => handleFavorite(rec)}
                   title="加入收藏"
+                  disabled={busyFav === rec.id}
                 >
                   <Heart size={16} />
                 </button>
                 <button
-                  className="p-2 rounded-lg hover:bg-red-50 text-gray-500 hover:text-red-500 transition"
+                  className={`p-2 rounded-lg hover:bg-red-50 text-gray-500 hover:text-red-500 transition ${busyDel === rec.id ? 'opacity-60' : ''}`}
                   onClick={() => setConfirmDelete(rec.id)}
                   title="删除"
+                  disabled={busyDel === rec.id}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -170,7 +152,6 @@ export default function MusicHistory() {
         </div>
       )}
 
-      {/* 删除确认 */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmDelete(null)} />
