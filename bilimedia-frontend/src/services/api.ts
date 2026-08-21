@@ -28,11 +28,11 @@ const api = axios.create({
 // 自动附加 JWT
 const TOKEN_KEY = 'bilimedia_token';
 api.interceptors.request.use((cfg) => {
-  if (typeof window === 'undefined') return cfg;
-  const tok = window.localStorage.getItem(TOKEN_KEY);
-  if (tok) {
-    cfg.headers = cfg.headers || {};
-    cfg.headers.Authorization = 'Bearer ' + tok;
+  if (typeof window !== 'undefined') {
+    const tok = window.localStorage.getItem(TOKEN_KEY);
+    if (tok) {
+      cfg.headers.Authorization = 'Bearer ' + tok;
+    }
   }
   return cfg;
 });
