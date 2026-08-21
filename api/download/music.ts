@@ -11,9 +11,12 @@ function sanitizeFilename(raw: string): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // 统一 CORS 头（允许从 GitHub Pages / 其它域名跨域访问）
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     return res.status(204).end();
   }
 

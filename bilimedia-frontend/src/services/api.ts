@@ -1,7 +1,27 @@
 import axios from 'axios';
 
+const VERCEL_API_BASE = 'https://bili-media.vercel.app/api';
+
+function resolveApiBase(): string {
+  if (typeof window === 'undefined') return '/api';
+  const host = window.location.hostname || '';
+  // 部署在 Vercel 域名（生产或预览）或本地开发：走同源相对路径
+  if (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host.endsWith('.vercel.app') ||
+    host === 'bili-media.vercel.app'
+  ) {
+    return '/api';
+  }
+  // GitHub Pages / 其它非 Vercel 域名：跨域走 Vercel 稳定生产地址
+  return VERCEL_API_BASE;
+}
+
+const API_BASE = resolveApiBase();
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -84,7 +104,8 @@ export function buildVideoDownloadUrl(params: {
   q.set('cid', String(params.cid));
   q.set('qn', String(params.qn));
   if (params.filename) q.set('filename', params.filename);
-  return `/api/download/video?${q.toString()}`;
+  const path = `/api/download/video?${q.toString()}`;
+  return API_BASE === '/api' ? path : `https://bili-media.vercel.app${path}`;
 }
 
 /** 构造音乐下载 URL（后端代理） */
@@ -92,7 +113,8 @@ export function buildMusicDownloadUrl(url: string, name: string) {
   const q = new URLSearchParams();
   q.set('url', encodeURIComponent(url));
   q.set('name', name);
-  return `/api/download/music?${q.toString()}`;
+  const path = `/api/download/music?${q.toString()}`;
+  return API_BASE === '/api' ? path : `https://bili-media.vercel.app${path}`;
 }
 
 export default api;
