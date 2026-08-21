@@ -1,5 +1,5 @@
 import { Download, Heart, ChevronDown } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { MusicItem, RecognizeResult } from '../services/api';
 import { buildMusicDownloadUrl } from '../services/api';
 import { useAuth, addMusicRecord } from '../services/auth';
@@ -15,41 +15,45 @@ interface Props {
 export default function MusicList({ result, loading, errorMsg, videoTitle, videoBvid }: Props) {
   const [showAll, setShowAll] = useState(false);
   const [loadingIdx, setLoadingIdx] = useState<number | null>(null);
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const savedIds = useRef<Set<string>>(new Set());
   const { user } = useAuth();
 
   const list = result?.list || [];
   const displayCount = showAll ? list.length : Math.min(3, list.length);
   const displayList = list.slice(0, displayCount);
 
-  // 自动保存识别历史
+  // 音乐识别完成后自动保存每首到后端（同一个 user + 相同 id 已存则跳过；后端也做了幂等兜底）
   useEffect(() => {
     if (!user || !result || list.length === 0) return;
-    const newIds = new Set(savedIds);
-    list.forEach((item) => {
-      const itemId = String(item.id);
-      if (!newIds.has(itemId)) {
-        newIds.add(itemId);
-        addMusicRecord({
-          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + item.id,
-          userId: user.id,
-          videoTitle: videoTitle || '未知视频',
-          bvid: videoBvid || '',
-          name: item.name,
-          artists: item.artists,
-          album: item.album,
-          cover: item.cover,
-          duration: item.duration,
-          matchScore: item.matchScore || 0,
-          mp3Url: item.mp3Url,
-          available: item.available,
-          recognizedAt: Date.now(),
-        });
+    (async () => {
+      let dirty = false;
+      for (const item of list) {
+        const itemKey = String(item.id) + '::' + (videoBvid || '');
+        if (savedIds.current.has(itemKey)) continue;
+        savedIds.current.add(itemKey);
+        try {
+          await addMusicRecord({
+            id: '',
+            userId: user.id,
+            videoTitle: videoTitle || '未知视频',
+            bvid: videoBvid || '',
+            name: item.name,
+            artists: item.artists,
+            album: item.album,
+            cover: item.cover,
+            duration: item.duration,
+            matchScore: item.matchScore || 0,
+            mp3Url: item.mp3Url,
+            available: item.available,
+            recognizedAt: Date.now(),
+          });
+          dirty = true;
+        } catch { /* ignore per-item */ }
       }
-    });
-    setSavedIds(newIds);
+      void dirty;
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result, user]);
+  }, [result, user, videoTitle, videoBvid]);
 
   const onDownload = async (item: MusicItem, idx: number) => {
     if (!item.mp3Url) return;
@@ -71,7 +75,6 @@ export default function MusicList({ result, loading, errorMsg, videoTitle, video
 
   return (
     <div className="card p-5 fade-up">
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="text-[15px] font-semibold text-[color:var(--color-txt-1)]">
           识别到的背景音乐
@@ -84,7 +87,6 @@ export default function MusicList({ result, loading, errorMsg, videoTitle, video
         </div>
       </div>
 
-      {/* Loading */}
       {loading && !result && (
         <div className="space-y-3 animate-pulse">
           {[0, 1, 2].map((i) => (
@@ -99,7 +101,6 @@ export default function MusicList({ result, loading, errorMsg, videoTitle, video
         </div>
       )}
 
-      {/* Error */}
       {errorMsg && !loading && (
         <div className="py-10 text-center text-[14px] text-[color:var(--color-txt-2)]">
           <div className="text-[15px] mb-1 text-[#ef4444]">识别未成功</div>
@@ -107,7 +108,6 @@ export default function MusicList({ result, loading, errorMsg, videoTitle, video
         </div>
       )}
 
-      {/* List */}
       {!loading && result && list.length === 0 && !errorMsg && (
         <div className="py-10 text-center text-[14px] text-[color:var(--color-txt-3)]">
           未识别到匹配的背景音乐，可尝试关键词更清晰的视频。
@@ -159,7 +159,6 @@ export default function MusicList({ result, loading, errorMsg, videoTitle, video
             </div>
           ))}
 
-          {/* 查看全部 */}
           {list.length > 0 && (
             <div className="pt-1 text-center">
               <button
