@@ -183,9 +183,6 @@ function AboutSection() {
         <Row label="隐私政策" value="查看" action />
         <Row label="联系方式" value="support@bilimedia.app" />
       </div>
-      <div className="mt-6 px-4 py-3 bg-gray-50 rounded-lg text-[13px] text-gray-500">
-        BiliMedia 是一个现代化的 B 站视频下载与音乐识别 SaaS 产品。本软件仅供学习和个人使用，请遵守相关法律法规和版权政策。
-      </div>
     </div>
   );
 }
