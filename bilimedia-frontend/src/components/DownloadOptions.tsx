@@ -44,7 +44,7 @@ export default function DownloadOptions({ info, onShowToast }: Props) {
         cid: info.cid,
         qn: current.qn,
         title: info.title,
-        thumbnail: info.thumbnail,
+        thumbnail: info.cover,
         author: info.author,
         duration: info.duration,
         filename,
