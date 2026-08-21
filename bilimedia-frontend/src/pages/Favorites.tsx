@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Download, Trash2, Heart } from 'lucide-react';
+import { Play, Download, Heart } from 'lucide-react';
 import { useAuth, getFavorites, removeFavorite } from '../services/auth';
 import type { FavoriteItem } from '../services/auth';
 

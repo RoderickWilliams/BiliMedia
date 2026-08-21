@@ -43,6 +43,7 @@ export interface MusicItem {
   mp3Url: string | null;
   available: boolean;
   source: string;
+  matchScore?: number;
 }
 
 export interface RecognizeResult {

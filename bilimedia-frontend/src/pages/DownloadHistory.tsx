@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Trash2, Heart, ExternalLink, AlertTriangle, Search, Play } from 'lucide-react';
+import { Download, Trash2, Heart, AlertTriangle, Search, Play } from 'lucide-react';
 import { useAuth, getDownloads, removeDownload, isFavorited, addFavorite } from '../services/auth';
 import type { DownloadRecord } from '../services/auth';
 
@@ -46,7 +46,7 @@ export default function DownloadHistory() {
     setDeadId(null);
     try {
       // 尝试 HEAD 请求检查链接是否仍有效
-      const resp = await fetch(rec.downloadUrl, { method: 'HEAD', mode: 'no-cors' });
+      await fetch(rec.downloadUrl, { method: 'HEAD', mode: 'no-cors' });
       // no-cors 模式下无法读取状态，但能到达说明至少没被 CORS 阻止
       // 直接打开下载链接
       const a = document.createElement('a');

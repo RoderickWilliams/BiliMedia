@@ -27,8 +27,9 @@ export default function MusicList({ result, loading, errorMsg, videoTitle, video
     if (!user || !result || list.length === 0) return;
     const newIds = new Set(savedIds);
     list.forEach((item) => {
-      if (!newIds.has(item.id)) {
-        newIds.add(item.id);
+      const itemId = String(item.id);
+      if (!newIds.has(itemId)) {
+        newIds.add(itemId);
         addMusicRecord({
           id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + item.id,
           userId: user.id,

@@ -110,7 +110,7 @@ export function addDownload(record: DownloadRecord) {
   writeJSON(DOWNLOADS_KEY, all.slice(0, 500));
 }
 
-export function removeDownload(userId: string, id: string) {
+export function removeDownload(_userId: string, id: string) {
   const all = readJSON<DownloadRecord[]>(DOWNLOADS_KEY, []);
   writeJSON(DOWNLOADS_KEY, all.filter(d => d.id !== id));
 }
@@ -126,7 +126,7 @@ export function addMusicRecord(record: MusicRecord) {
   writeJSON(MUSIC_KEY, all.slice(0, 500));
 }
 
-export function removeMusicRecord(userId: string, id: string) {
+export function removeMusicRecord(_userId: string, id: string) {
   const all = readJSON<MusicRecord[]>(MUSIC_KEY, []);
   writeJSON(MUSIC_KEY, all.filter(m => m.id !== id));
 }
@@ -144,7 +144,7 @@ export function addFavorite(item: FavoriteItem) {
   writeJSON(FAVORITES_KEY, all.slice(0, 500));
 }
 
-export function removeFavorite(userId: string, id: string) {
+export function removeFavorite(_userId: string, id: string) {
   const all = readJSON<FavoriteItem[]>(FAVORITES_KEY, []);
   writeJSON(FAVORITES_KEY, all.filter(f => f.id !== id));
 }

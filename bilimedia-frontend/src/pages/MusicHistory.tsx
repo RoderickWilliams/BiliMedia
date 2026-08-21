@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, Play, Download, Heart, Trash2, ExternalLink } from 'lucide-react';
+import { Search, Play, Download, Heart, Trash2 } from 'lucide-react';
 import { useAuth, getMusicHistory, removeMusicRecord, isFavorited, addFavorite } from '../services/auth';
 import type { MusicRecord } from '../services/auth';
-
-function formatDuration(sec: number): string {
-  if (!sec) return '-';
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
 
 function formatDate(ts: number): string {
   const d = new Date(ts);
