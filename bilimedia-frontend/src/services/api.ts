@@ -1,23 +1,28 @@
 import axios from 'axios';
 
-// ============ 基础：动态 API Base（保持与旧版一致） ============
-const VERCEL_API_BASE = 'https://bili-media.vercel.app/api';
+// ============ 基础：动态 API Base ============
+// 国内无代理用户访问 GitHub Pages 时，bili-media.vercel.app 被 DNS 污染不可达，
+// 故经 Deno Deploy 反代（*.deno.net 国内可达）中转到 Vercel 后端。
+const DENO_PROXY_ORIGIN = 'https://eerie-sheep-3515.roderickwilliams.deno.net';
 
-function resolveApiBase(): string {
-  if (typeof window === 'undefined') return '/api';
+function resolveApiOrigin(): string {
+  if (typeof window === 'undefined') return '';
   const host = window.location.hostname || '';
+  // 本地开发 / Vercel 入口：同域相对路径
   if (
     host === 'localhost' ||
     host === '127.0.0.1' ||
     host.endsWith('.vercel.app') ||
     host === 'bili-media.vercel.app'
   ) {
-    return '/api';
+    return '';
   }
-  return VERCEL_API_BASE;
+  // 其他域名（GitHub Pages 等，主要服务国内无代理用户）→ Deno 反代
+  return DENO_PROXY_ORIGIN;
 }
 
-export const API_BASE = resolveApiBase();
+export const API_ORIGIN = resolveApiOrigin();
+export const API_BASE = API_ORIGIN + '/api';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -131,7 +136,7 @@ export function buildVideoDownloadUrl(params: {
   q.set('qn', String(params.qn));
   if (params.filename) q.set('filename', params.filename);
   const path = `/api/download/video?${q.toString()}`;
-  return API_BASE === '/api' ? path : `https://bili-media.vercel.app${path}`;
+  return API_ORIGIN + path;
 }
 
 export function buildMusicDownloadUrl(url: string, name: string) {
@@ -139,7 +144,7 @@ export function buildMusicDownloadUrl(url: string, name: string) {
   q.set('url', encodeURIComponent(url));
   q.set('name', name);
   const path = `/api/download/music?${q.toString()}`;
-  return API_BASE === '/api' ? path : `https://bili-media.vercel.app${path}`;
+  return API_ORIGIN + path;
 }
 
 // ============ 账号：注册 / 登录 ============
