@@ -1,6 +1,18 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { useSyncExternalStore } from 'react';
+import {
+  authRegister,
+  authLogin,
+  dataList,
+  dataListAll,
+  dataAdd,
+  dataDelete,
+  readJwtPayload,
+  TOKEN_STORAGE_KEY,
+  type LoggedUser,
+} from './api';
 
-// ============ 类型定义 ============
+// ============ 类型定义（与旧版相同，保证页面不改接口） ============
 export interface User {
   id: string;
   username: string;
@@ -8,6 +20,7 @@ export interface User {
   avatar?: string;
   createdAt: number;
 }
+export { LoggedUser };
 
 export interface DownloadRecord {
   id: string;
@@ -67,168 +80,134 @@ interface AuthContextType {
   showLoginModal: boolean;
   openLoginModal: () => void;
   closeLoginModal: () => void;
+  /** 触发一次从后端刷新（用于保存后立即更新列表） */
+  refreshData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// ============ localStorage Key ============
-const USERS_KEY = 'bilimedia_users';
-const CURRENT_USER_KEY = 'bilimedia_current_user';
-const DOWNLOADS_KEY = 'bilimedia_downloads';
-const MUSIC_KEY = 'bilimedia_music';
-const FAVORITES_KEY = 'bilimedia_favorites';
+// =============================================================
+// 模块级缓存：AuthProvider + CRUD 函数都直接操作这一组缓存，
+// 配合 useSyncExternalStore 让所有页面实时响应变化
+// =============================================================
+let cachedDownloads: DownloadRecord[] = [];
+let cachedMusic: MusicRecord[] = [];
+let cachedFavorites: FavoriteItem[] = [];
+let sesRev = 0;
+const sesListeners = new Set<() => void>();
+function bumpStore() {
+  sesRev++;
+  sesListeners.forEach((l) => { try { l(); } catch { /* noop */ } });
+}
+function subscribeStore(l: () => void) { sesListeners.add(l); return () => sesListeners.delete(l); }
+function getStoreRev() { return sesRev; }
 
-// ============ 工具函数 ============
-function genId(): string {
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', bumpStore);
+}
+
+function _uid(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-function readJSON<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) as T : fallback;
-  } catch {
-    return fallback;
-  }
+// 缓存读取
+export function readDownloads(): DownloadRecord[] { return cachedDownloads.slice(); }
+export function readMusic(): MusicRecord[] { return cachedMusic.slice(); }
+export function readFavorites(): FavoriteItem[] { return cachedFavorites.slice(); }
+
+// Hook 版（页面推荐使用，能自动响应缓存刷新）
+export function useDownloads(): DownloadRecord[] {
+  useSyncExternalStore(subscribeStore, getStoreRev, getStoreRev);
+  return readDownloads();
+}
+export function useMusicHistoryHook(): MusicRecord[] {
+  useSyncExternalStore(subscribeStore, getStoreRev, getStoreRev);
+  return readMusic();
+}
+export function useFavoritesHook(): FavoriteItem[] {
+  useSyncExternalStore(subscribeStore, getStoreRev, getStoreRev);
+  return readFavorites();
 }
 
-function writeJSON(key: string, val: unknown) {
-  try {
-    localStorage.setItem(key, JSON.stringify(val));
-  } catch { /* ignore */ }
-}
+// 兼容旧版同步读取 API（若组件不订阅会拿不到实时更新，但对当前 useEffect+reload 模式足够）
+export function getDownloads(_userId: string): DownloadRecord[] { return readDownloads(); }
+export function getMusicHistory(_userId: string): MusicRecord[] { return readMusic(); }
+export function getFavorites(_userId: string): FavoriteItem[] { return readFavorites(); }
 
-// ============ 历史记录操作 ============
-export function getDownloads(userId: string): DownloadRecord[] {
-  const all = readJSON<DownloadRecord[]>(DOWNLOADS_KEY, []);
-  return all.filter(d => d.userId === userId).sort((a, b) => b.createdAt - a.createdAt);
-}
-
-export function addDownload(record: DownloadRecord) {
-  const all = readJSON<DownloadRecord[]>(DOWNLOADS_KEY, []);
-  all.unshift(record);
-  writeJSON(DOWNLOADS_KEY, all.slice(0, 500));
-}
-
-export function removeDownload(_userId: string, id: string) {
-  const all = readJSON<DownloadRecord[]>(DOWNLOADS_KEY, []);
-  writeJSON(DOWNLOADS_KEY, all.filter(d => d.id !== id));
-}
-
-export function getMusicHistory(userId: string): MusicRecord[] {
-  const all = readJSON<MusicRecord[]>(MUSIC_KEY, []);
-  return all.filter(m => m.userId === userId).sort((a, b) => b.recognizedAt - a.recognizedAt);
-}
-
-export function addMusicRecord(record: MusicRecord) {
-  const all = readJSON<MusicRecord[]>(MUSIC_KEY, []);
-  all.unshift(record);
-  writeJSON(MUSIC_KEY, all.slice(0, 500));
-}
-
-export function removeMusicRecord(_userId: string, id: string) {
-  const all = readJSON<MusicRecord[]>(MUSIC_KEY, []);
-  writeJSON(MUSIC_KEY, all.filter(m => m.id !== id));
-}
-
-export function getFavorites(userId: string): FavoriteItem[] {
-  const all = readJSON<FavoriteItem[]>(FAVORITES_KEY, []);
-  return all.filter(f => f.userId === userId).sort((a, b) => b.createdAt - a.createdAt);
-}
-
-export function addFavorite(item: FavoriteItem) {
-  const all = readJSON<FavoriteItem[]>(FAVORITES_KEY, []);
-  // 防止重复
-  if (all.some(f => f.userId === item.userId && f.type === item.type && f.targetId === item.targetId)) return;
-  all.unshift(item);
-  writeJSON(FAVORITES_KEY, all.slice(0, 500));
-}
-
-export function removeFavorite(_userId: string, id: string) {
-  const all = readJSON<FavoriteItem[]>(FAVORITES_KEY, []);
-  writeJSON(FAVORITES_KEY, all.filter(f => f.id !== id));
-}
-
-export function isFavorited(userId: string, type: 'video' | 'music', targetId: string): boolean {
-  const all = readJSON<FavoriteItem[]>(FAVORITES_KEY, []);
-  return all.some(f => f.userId === userId && f.type === type && f.targetId === targetId);
-}
-
-// ============ Provider ============
+// ============ Provider（全栈后端方案） ============
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  useEffect(() => {
-    const current = readJSON<{ username: string } | null>(CURRENT_USER_KEY, null);
-    if (current) {
-      const users = readJSON<User[]>(USERS_KEY, []);
-      const found = users.find(u => u.username === current.username);
-      if (found) setUser(found);
-    }
+  const pullAll = useCallback(async () => {
+    try {
+      const all = await dataListAll();
+      cachedDownloads = all.downloads;
+      cachedMusic = all.music;
+      cachedFavorites = all.favorites;
+      bumpStore();
+    } catch { /* ignore */ }
   }, []);
+
+  // 初始化：从 localStorage 的 JWT 判断登录状态，然后拉一次全量数据
+  useEffect(() => {
+    (async () => {
+      const tok = localStorage.getItem(TOKEN_STORAGE_KEY);
+      const p = readJwtPayload(tok);
+      if (!p) return;
+      setUser({ id: p.sub, username: p.username, email: p.email, createdAt: 0 });
+      await pullAll();
+    })();
+  }, [pullAll]);
+
+  const refreshData = useCallback(async () => { await pullAll(); }, [pullAll]);
 
   const login = useCallback(async (username: string, password: string) => {
-    const users = readJSON<Array<{ id: string; username: string; email: string; password: string; createdAt: number }>>(USERS_KEY, []);
-    const found = users.find(u => u.username === username && u.password === password);
-    if (!found) {
-      return { ok: false, message: '用户名或密码错误' };
-    }
-    const u: User = { id: found.id, username: found.username, email: found.email, createdAt: found.createdAt };
+    const r = await authLogin({ username, password });
+    if (!r.ok) return { ok: false, message: r.message };
+    const u: User = { id: r.user.id, username: r.user.username, email: r.user.email, createdAt: r.user.createdAt };
     setUser(u);
-    writeJSON(CURRENT_USER_KEY, { username: u.username });
     setShowLoginModal(false);
+    await pullAll();
     return { ok: true, message: '登录成功' };
-  }, []);
+  }, [pullAll]);
 
   const register = useCallback(async (username: string, email: string, password: string) => {
-    if (!username || username.length < 2) {
-      return { ok: false, message: '用户名至少 2 个字符' };
-    }
-    if (!email) {
-      return { ok: false, message: '请输入邮箱' };
-    }
-    if (!password || password.length < 4) {
-      return { ok: false, message: '密码至少 4 个字符' };
-    }
-    const users = readJSON<Array<{ id: string; username: string; email: string; password: string; createdAt: number }>>(USERS_KEY, []);
-    if (users.some(u => u.username === username)) {
-      return { ok: false, message: '用户名已存在' };
-    }
-    if (users.some(u => u.email === email)) {
-      return { ok: false, message: '邮箱已被注册' };
-    }
-    const newUser = { id: genId(), username, email, password, createdAt: Date.now() };
-    users.push(newUser);
-    writeJSON(USERS_KEY, users);
-    const u: User = { id: newUser.id, username: newUser.username, email: newUser.email, createdAt: newUser.createdAt };
+    const r = await authRegister({ username, email, password });
+    if (!r.ok) return { ok: false, message: r.message };
+    const u: User = { id: r.user.id, username: r.user.username, email: r.user.email, createdAt: r.user.createdAt };
     setUser(u);
-    writeJSON(CURRENT_USER_KEY, { username: u.username });
     setShowLoginModal(false);
+    await pullAll();
     return { ok: true, message: '注册成功' };
-  }, []);
+  }, [pullAll]);
 
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem(CURRENT_USER_KEY);
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    cachedDownloads = [];
+    cachedMusic = [];
+    cachedFavorites = [];
+    bumpStore();
   }, []);
 
   const openLoginModal = useCallback(() => setShowLoginModal(true), []);
   const closeLoginModal = useCallback(() => setShowLoginModal(false), []);
 
+  const value = useMemo<AuthContextType>(() => ({
+    user,
+    login,
+    register,
+    logout,
+    isLoggedIn: !!user,
+    showLoginModal,
+    openLoginModal,
+    closeLoginModal,
+    refreshData,
+  }), [user, login, register, logout, showLoginModal, openLoginModal, closeLoginModal, refreshData]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        register,
-        logout,
-        isLoggedIn: !!user,
-        showLoginModal,
-        openLoginModal,
-        closeLoginModal,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
@@ -238,4 +217,62 @@ export function useAuth(): AuthContextType {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
+}
+
+// ============ 记录 CRUD（组件调用，与后端同步 + 更新模块级缓存） ============
+export async function addDownload(record: DownloadRecord): Promise<void> {
+  const toAdd: any = { ...record };
+  if (!toAdd.id) toAdd.id = _uid();
+  const r = await dataAdd('downloads', toAdd);
+  toAdd.id = r.id || toAdd.id;
+  cachedDownloads = [toAdd, ...cachedDownloads.filter((x: any) => x.id !== toAdd.id)];
+  bumpStore();
+}
+
+export async function removeDownload(_userId: string, id: string): Promise<void> {
+  await dataDelete('downloads', id);
+  cachedDownloads = cachedDownloads.filter((r: any) => r.id !== id);
+  bumpStore();
+}
+
+export async function addMusicRecord(record: MusicRecord): Promise<void> {
+  const toAdd: any = { ...record };
+  if (!toAdd.id) toAdd.id = _uid();
+  const r = await dataAdd('music', toAdd);
+  toAdd.id = r.id || toAdd.id;
+  cachedMusic = [toAdd, ...cachedMusic.filter((x: any) => x.id !== toAdd.id)];
+  bumpStore();
+}
+
+export async function removeMusicRecord(_userId: string, id: string): Promise<void> {
+  await dataDelete('music', id);
+  cachedMusic = cachedMusic.filter((r: any) => r.id !== id);
+  bumpStore();
+}
+
+export async function addFavorite(item: FavoriteItem): Promise<void> {
+  const toAdd: any = { ...item };
+  if (!toAdd.id) toAdd.id = _uid();
+  const r = await dataAdd('favorites', toAdd);
+  if (r.existed) return;
+  toAdd.id = r.id || toAdd.id;
+  cachedFavorites = [toAdd, ...cachedFavorites.filter((x: any) => x.id !== toAdd.id)];
+  bumpStore();
+}
+
+export async function removeFavorite(_userId: string, id: string): Promise<void> {
+  await dataDelete('favorites', id);
+  cachedFavorites = cachedFavorites.filter((r: any) => r.id !== id);
+  bumpStore();
+}
+
+export function isFavorited(_userId: string, type: 'video' | 'music', targetId: string): boolean {
+  return cachedFavorites.some((f: any) => f.type === type && f.targetId === targetId);
+}
+
+export async function refreshBucket(bucket: 'downloads' | 'music' | 'favorites') {
+  if (bucket === 'downloads') cachedDownloads = await dataList<DownloadRecord>('downloads');
+  if (bucket === 'music') cachedMusic = await dataList<MusicRecord>('music');
+  if (bucket === 'favorites') cachedFavorites = await dataList<FavoriteItem>('favorites');
+  bumpStore();
 }
