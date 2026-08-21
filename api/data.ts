@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getStore, saveStore, type Store } from '../../lib/storage';
-import { verifyJwt } from '../../lib/jwt';
-import { applyCors, fail, ok, parseBearerToken } from '../../lib/http';
+import { getStore, saveStore, type Store } from '../lib/storage';
+import { verifyJwt } from '../lib/jwt';
+import { applyCors, fail, ok, parseBearerToken } from '../lib/http';
 
 type Bucket = 'downloads' | 'music' | 'favorites';
 const BUCKETS: Bucket[] = ['downloads', 'music', 'favorites'];
