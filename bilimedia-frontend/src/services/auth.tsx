@@ -20,7 +20,7 @@ export interface User {
   avatar?: string;
   createdAt: number;
 }
-export { LoggedUser };
+export type { LoggedUser };
 
 export interface DownloadRecord {
   id: string;
