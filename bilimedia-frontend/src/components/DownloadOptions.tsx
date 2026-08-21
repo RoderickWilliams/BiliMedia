@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Download, Link2, Loader2 } from 'lucide-react';
 import type { QualityOption, VideoInfo } from '../services/api';
 import { buildVideoDownloadUrl } from '../services/api';
+import { useAuth, addDownload } from '../services/auth';
 
 interface Props {
   info: VideoInfo | null;
@@ -11,6 +12,7 @@ interface Props {
 export default function DownloadOptions({ info, onShowToast }: Props) {
   const [selected, setSelected] = useState<number>(80);
   const [downloading, setDownloading] = useState(false);
+  const { user } = useAuth();
 
   if (!info) return null;
 
@@ -24,19 +26,45 @@ export default function DownloadOptions({ info, onShowToast }: Props) {
   const onDownload = () => {
     if (!current || !current.available) return;
     setDownloading(true);
-    try {
-      const a = document.createElement('a');
-      a.href = buildVideoDownloadUrl({
+
+    const dlUrl = buildVideoDownloadUrl({
+      bvid: info.bvid,
+      cid: info.cid,
+      qn: current.qn,
+      filename: info.title,
+    });
+    const filename = `${info.title}_${current.sub}.mp4`;
+
+    // 保存下载历史
+    if (user) {
+      addDownload({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        userId: user.id,
         bvid: info.bvid,
         cid: info.cid,
         qn: current.qn,
-        filename: info.title,
+        title: info.title,
+        thumbnail: info.thumbnail,
+        author: info.author,
+        duration: info.duration,
+        filename,
+        downloadUrl: dlUrl,
+        status: 'completed',
+        fileSize: current.sizeEstimateMB * 1024 * 1024,
+        qualityLabel: current.label,
+        createdAt: Date.now(),
+        completedAt: Date.now(),
       });
-      a.download = `${info.title}_${current.sub}.mp4`;
+    }
+
+    try {
+      const a = document.createElement('a');
+      a.href = dlUrl;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      onShowToast?.('已开始下载视频，请查看浏览器下载栏', true);
+      onShowToast?.(user ? '已开始下载视频，下载历史已保存' : '已开始下载视频，请查看浏览器下载栏', true);
     } finally {
       setTimeout(() => setDownloading(false), 1000);
     }

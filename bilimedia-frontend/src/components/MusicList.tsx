@@ -1,21 +1,54 @@
 import { Download, Heart, ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { MusicItem, RecognizeResult } from '../services/api';
 import { buildMusicDownloadUrl } from '../services/api';
+import { useAuth, addMusicRecord } from '../services/auth';
 
 interface Props {
   result: RecognizeResult | null;
   loading?: boolean;
   errorMsg?: string;
+  videoTitle?: string;
+  videoBvid?: string;
 }
 
-export default function MusicList({ result, loading, errorMsg }: Props) {
+export default function MusicList({ result, loading, errorMsg, videoTitle, videoBvid }: Props) {
   const [showAll, setShowAll] = useState(false);
   const [loadingIdx, setLoadingIdx] = useState<number | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
 
   const list = result?.list || [];
   const displayCount = showAll ? list.length : Math.min(3, list.length);
   const displayList = list.slice(0, displayCount);
+
+  // 自动保存识别历史
+  useEffect(() => {
+    if (!user || !result || list.length === 0) return;
+    const newIds = new Set(savedIds);
+    list.forEach((item) => {
+      if (!newIds.has(item.id)) {
+        newIds.add(item.id);
+        addMusicRecord({
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + item.id,
+          userId: user.id,
+          videoTitle: videoTitle || '未知视频',
+          bvid: videoBvid || '',
+          name: item.name,
+          artists: item.artists,
+          album: item.album,
+          cover: item.cover,
+          duration: item.duration,
+          matchScore: item.matchScore || 0,
+          mp3Url: item.mp3Url,
+          available: item.available,
+          recognizedAt: Date.now(),
+        });
+      }
+    });
+    setSavedIds(newIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, user]);
 
   const onDownload = async (item: MusicItem, idx: number) => {
     if (!item.mp3Url) return;

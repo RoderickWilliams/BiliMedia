@@ -6,6 +6,7 @@ import VideoCard from '../components/VideoCard';
 import MusicList from '../components/MusicList';
 import DownloadOptions from '../components/DownloadOptions';
 import FeatureFooter from '../components/FeatureFooter';
+import { useAuth } from '../services/auth';
 
 import {
   parseVideo,
@@ -15,6 +16,7 @@ import {
 } from '../services/api';
 
 export default function Home() {
+  const { isLoggedIn, openLoginModal } = useAuth();
   const [url, setUrl] = useState('');
   const [inputErr, setInputErr] = useState(false);
 
@@ -52,6 +54,11 @@ export default function Home() {
     setMusicResult(null);
     setVideoInfo(null);
 
+    // 未登录时提示登录
+    if (!isLoggedIn) {
+      showToast('提示：登录后可保存下载和识别历史', true);
+    }
+
     try {
       const info = await parseVideo(u);
       setVideoInfo(info);
@@ -86,7 +93,6 @@ export default function Home() {
         if (canceled) return;
         const m = e?.message || '音乐识别失败';
         setMusicErr(m);
-        // 音乐识别失败不弹错误 toast 干扰，只在卡片内展示即可
         void m;
       } finally {
         if (!canceled) setMusicLoading(false);
@@ -95,6 +101,7 @@ export default function Home() {
     return () => {
       canceled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoInfo]);
 
   const hasAnyContent =
@@ -165,6 +172,17 @@ export default function Home() {
               链接格式不正确，示例：https://www.bilibili.com/video/BV1xx411c7mD
             </div>
           )}
+          {!isLoggedIn && (
+            <div className="mt-3 text-center text-[12.5px] text-gray-500">
+              <button
+                className="text-indigo-500 hover:underline font-medium"
+                onClick={openLoginModal}
+              >
+                登录后
+              </button>
+              可自动保存下载和识别历史记录
+            </div>
+          )}
         </div>
 
         <FeatureBadges />
@@ -191,6 +209,8 @@ export default function Home() {
               result={musicResult}
               loading={musicLoading}
               errorMsg={musicErr}
+              videoTitle={videoInfo?.title}
+              videoBvid={videoInfo?.bvid}
             />
           </div>
         </section>

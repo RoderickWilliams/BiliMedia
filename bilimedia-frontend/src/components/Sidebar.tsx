@@ -1,4 +1,4 @@
-﻿import {
+import {
   Home,
   History,
   Music2,
@@ -38,7 +38,7 @@ export default function Sidebar({ active = 'home', onChange }: Props) {
           <Play size={18} fill="#fff" />
         </div>
         <div className="text-[18px] font-bold tracking-wide" style={{ color: 'var(--color-txt-1)' }}>
-          Bili<span className="text-gradient">Music</span>
+          Bili<span className="text-gradient">Media</span>
         </div>
       </div>
 
@@ -56,7 +56,7 @@ export default function Sidebar({ active = 'home', onChange }: Props) {
         ))}
       </nav>
 
-      {/* 占位底部留白（忽略：升级高级版 / 深色模式） */}
+      {/* 占位底部留白 */}
       <div className="mt-auto pt-4 px-2 text-[12px] text-[color:var(--color-txt-3)]">
         © {new Date().getFullYear()} BiliMedia · 内部演示版
       </div>
