@@ -5,7 +5,7 @@
   "private": true,
   "license": "MIT",
   "dependencies": {
-    "@vercel/node": "^3.2.31",
+    "@vercel/node": "^5.10.2",
     "axios": "^1.7.9"
   },
   "devDependencies": {
