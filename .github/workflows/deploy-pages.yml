@@ -41,7 +41,7 @@ jobs:
           PAGES_DEPLOY: '1'
         run: npm run build
 
-      - name: SPA fallback: ensure 404.html matches index.html
+      - name: "SPA fallback - ensure 404.html matches index.html"
         working-directory: bilimedia-frontend
         run: |
           if [ ! -f dist/404.html ] || ! diff dist/index.html dist/404.html >/dev/null 2>&1; then
@@ -69,4 +69,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
-# trigger test: 2026-08-23 15:18:02
