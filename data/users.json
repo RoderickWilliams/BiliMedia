@@ -6,5 +6,13 @@
     "passwordHash": "e785aee29f89802432a6d40d8a86d2820c0f3f122c027e7dc52d3ecae5f4469e",
     "salt": "6d45427025927218",
     "createdAt": 1787468061978
+  },
+  {
+    "id": "mt5ggh3ky2pcy1",
+    "username": "e2ejwbtag",
+    "email": "e2ejwbtag@test.com",
+    "passwordHash": "cb74502e839512d16133c09ccd49baf5bda66787d96b57c16d8f3db8a3aec312",
+    "salt": "b6022adbb7787221",
+    "createdAt": 1787468271248
   }
 ]
