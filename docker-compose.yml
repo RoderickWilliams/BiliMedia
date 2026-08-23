@@ -1,0 +1,12 @@
+services:
+  bilimedia:
+    build: .
+    container_name: bilimedia
+    ports:
+      - "5000:80"
+    volumes:
+      - bilimedia-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  bilimedia-data:
