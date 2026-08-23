@@ -1,0 +1,10 @@
+[
+  {
+    "id": "mt5c0z8oi9ufcm",
+    "username": "testuser",
+    "email": "test@test.com",
+    "passwordHash": "30464a4285c6969ce46c627cdfd78e8d27874ffcd5c76f4f59a3d6fb69484cd7",
+    "salt": "3488b920c6603072",
+    "createdAt": 1787460829800
+  }
+]
