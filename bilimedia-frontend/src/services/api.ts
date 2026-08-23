@@ -1,28 +1,10 @@
 import axios from 'axios';
 
 // ============ 基础：动态 API Base ============
-// 优先级：构建时 VITE_API_ORIGIN > 同源 /api > Vercel 兜底
-const VERCEL_ORIGIN = 'https://bili-media.vercel.app';
+// 优先级：构建时 VITE_API_ORIGIN（GitHub Pages 等跨域场景指向腾讯云域名） > 同源 /api（Docker 同域部署）
 const ENV_API_ORIGIN = (import.meta as any).env?.VITE_API_ORIGIN || '';
 
-function resolveApiOrigin(): string {
-  if (ENV_API_ORIGIN) return ENV_API_ORIGIN.replace(/\/+$/, '');
-  if (typeof window === 'undefined') return '';
-  const host = window.location.hostname || '';
-  if (
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host.endsWith('.vercel.app') ||
-    host === 'bili-media.vercel.app' ||
-    host.endsWith('.tcloudbaseapp.com') ||
-    host.endsWith('.run.tencentcloudapi.com')
-  ) {
-    return '';
-  }
-  return VERCEL_ORIGIN;
-}
-
-const API_ORIGIN = resolveApiOrigin();
+const API_ORIGIN = ENV_API_ORIGIN ? ENV_API_ORIGIN.replace(/\/+$/, '') : '';
 export const API_BASE = API_ORIGIN ? `${API_ORIGIN}/api` : '/api';
 
 const api = axios.create({
@@ -198,7 +180,7 @@ export async function dataAdd(bucket: DataBucket, record: Record<string, unknown
     `/data?bucket=${encodeURIComponent(bucket)}`,
     { record },
   );
-  if (!r.data.ok) throw new Error(r.data.message || '保存失败');
+  if (!r.data.ok) throw new Error(r.data.message || '写入失败');
   return r.data.data!;
 }
 

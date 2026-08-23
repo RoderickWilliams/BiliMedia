@@ -2,11 +2,16 @@
 
 > B 站视频高清解析下载 + 网易云背景音乐识别 SaaS 应用
 
-粘贴 B 站视频链接，一键获取视频信息、多档清晰度下载，并智能识别视频所用的背景音乐（网易云音乐），支持在线试听与下载。开箱即用，**国内无代理环境也能完整使用全部功能**。
+粘贴 B 站视频链接，一键获取视频信息、多档清晰度下载，并智能识别视频所用的背景音乐（网易云音乐），支持在线试听与下载。
 
-- 🌐 在线体验（GitHub Pages）：<https://roderickwilliams.github.io/BiliMedia/>
-- ⚡ Vercel 后端：<https://bili-media.vercel.app>
-- 🔁 Deno Deploy 反代（国内中转）：<https://eerie-sheep-3515.roderickwilliams.deno.net>
+## 在线体验
+
+| 部署方式 | 地址 | 说明 |
+| --- | --- | --- |
+| 全栈（腾讯云 Docker） | 待部署 | 国内 IP，B 站解析 + 音乐识别全部可用，国内外均可访问 |
+| 前端（GitHub Pages） | <https://roderickwilliams.github.io/BiliMedia/> | 静态页面，需配合腾讯云 API 使用 |
+
+> ⚠️ **重要**：B 站 API 对海外 IP 返回 `-404 啥都木有`，网易云音乐搜索 API 同样对海外 IP 返回空结果。因此后端**必须部署在国内服务器上**（推荐腾讯云）。腾讯云域名从海外也可访问，服务器以国内 IP 请求 B 站 API，国内外用户均可正常使用。
 
 ---
 
@@ -16,15 +21,13 @@
 - [技术栈](#技术栈)
 - [项目结构](#项目结构)
 - [快速开始](#快速开始)
-  - [一键启动（Windows）](#一键启动windows)
-  - [手动启动](#手动启动)
 - [部署指南](#部署指南)
-  - [部署到 Vercel](#部署到-vercel)
+  - [Docker 部署（推荐）](#docker-部署推荐)
+  - [腾讯云 CloudBase 云托管](#腾讯云-cloudbase-云托管)
   - [部署到 GitHub Pages](#部署到-github-pages)
-  - [部署 Deno Deploy 反代](#部署-deno-deploy-反代国内无代理用户)
 - [环境变量](#环境变量)
 - [API 文档](#api-文档)
-- [国内无代理访问说明](#国内无代理访问说明)
+- [网络架构说明](#网络架构说明)
 - [常见问题](#常见问题)
 - [License](#license)
 
@@ -52,7 +55,7 @@
 
 - 注册 / 登录（JWT 鉴权，30 天有效期）
 - 密码 SHA-256 + 每用户随机盐值哈希
-- 下载历史、音乐识别记录、收藏夹本地持久化
+- 下载历史、音乐识别记录、收藏夹持久化
 
 ### 🎨 产品体验
 
@@ -68,10 +71,9 @@
 | 层级 | 技术 |
 | --- | --- |
 | 前端 | React 18、TypeScript 5、Vite 5、Tailwind CSS 4、Axios、Lucide Icons |
-| 后端（Serverless） | Vercel Node.js Functions、TypeScript |
-| 后端（本地开发） | Express 5、ts-node、Nodemon |
-| 反代 | Deno Deploy（TypeScript，Deno.serve） |
-| 数据存储 | GitHub Contents API（JSON 文件，无数据库） |
+| 后端 | Express 5、TypeScript、tsc 编译 |
+| 容器化 | Docker（多阶段构建，Node 20 Alpine） |
+| 数据存储 | 本地 JSON 文件（默认）或 GitHub Contents API |
 | 鉴权 | 自实现 HMAC-SHA256 JWT（`node:crypto`） |
 | CI/CD | GitHub Actions（构建 + 部署 GitHub Pages） |
 | 外部 API | Bilibili Web API、网易云音乐 Web API |
@@ -82,52 +84,42 @@
 
 ```
 BiliMedia/
-├── api/                            # Vercel Serverless Functions
-│   ├── parse.ts                    #   视频解析
-│   ├── recognize.ts                #   音乐识别
-│   ├── data.ts                     #   用户数据读写（历史/收藏）
-│   ├── auth/
-│   │   ├── login.ts                #   登录
-│   │   └── register.ts             #   注册
-│   └── download/
-│       ├── video.ts                #   视频流式下载代理
-│       └── music.ts                #   音乐流式下载代理
-├── lib/                            # 服务端共享模块
-│   ├── bilibili.ts                 #   B 站 API 封装（视频信息 + 播放源）
-│   ├── netease.ts                  #   网易云 API 封装（搜索 + 详情 + 试听）
-│   ├── http.ts                     #   HTTP 客户端封装
-│   ├── jwt.ts                      #   JWT 签发/校验 + 密码哈希
-│   └── storage.ts                  #   GitHub Contents API 持久化
-├── deno-proxy/
-│   └── main.ts                     # Deno Deploy 反代（国内中转 Vercel）
 ├── bilimedia-frontend/             # 前端项目（React + Vite）
 │   ├── src/
-│   │   ├── components/             #   UI 组件（Sidebar/Topbar/VideoCard/MusicList...）
-│   │   ├── pages/                  #   页面（Home/DownloadHistory/MusicHistory/Favorites/Settings）
+│   │   ├── components/             #   UI 组件
+│   │   ├── pages/                  #   页面
 │   │   ├── services/
-│   │   │   ├── api.ts              #     Axios 实例 + API 调用封装
+│   │   │   ├── api.ts              #     Axios 实例 + API 封装
 │   │   │   └── auth.tsx            #     Auth Context
-│   │   ├── assets/
 │   │   ├── App.tsx
 │   │   ├── main.tsx
-│   │   └── index.css               #   Tailwind + 本地 @font-face
+│   │   └── index.css
 │   ├── public/fonts/               #   Inter 字体 woff2（本地化）
 │   ├── index.html
-│   ├── vite.config.mts             #   支持 PAGES_DEPLOY 切换 base 路径
+│   ├── vite.config.mts
 │   └── package.json
-├── bilimedia-backend/              # 本地开发用 Express 后端
+├── bilimedia-backend/              # Express 后端
 │   ├── src/
-│   │   ├── index.ts
+│   │   ├── index.ts                #   Express 入口
 │   │   ├── routes/
+│   │   │   ├── parse.ts            #     视频解析
+│   │   │   ├── recognize.ts        #     音乐识别
+│   │   │   ├── download.ts         #     下载代理
+│   │   │   ├── auth.ts             #     登录/注册
+│   │   │   └── data.ts             #     用户数据 CRUD
 │   │   └── services/
+│   │       ├── bilibili.ts         #     B 站 API
+│   │       ├── netease.ts          #     网易云 API
+│   │       ├── jwt.ts              #     JWT 服务
+│   │       └── storage.ts          #     本地 JSON + GitHub 双模式存储
 │   └── package.json
 ├── .github/workflows/
-│   └── deploy-pages.yml            # GitHub Actions：构建并部署到 GitHub Pages
-├── start-BiliMedia.bat             # Windows 一键启动脚本
-├── deploy-gh-pages.mjs             # GitHub Pages 部署辅助脚本
-├── vercel.json                     # Vercel 部署配置
-├── tsconfig.json
-└── package.json
+│   └── deploy-pages.yml            # GitHub Actions → Pages
+├── Dockerfile                      # 根级 Dockerfile（前后端一体镜像）
+├── .dockerignore
+├── .gitignore
+├── start-BiliMedia.bat             # Windows 一键启动（本地开发）
+└── README.md
 ```
 
 ---
@@ -190,71 +182,117 @@ Vite 已配置代理：`/api/*` 请求会自动转发到 `http://localhost:5000`
 
 ## 部署指南
 
-项目支持三种独立部署，按需组合：
+### Docker 部署（推荐）
 
-### 部署到 Vercel
+根目录 `Dockerfile` 是多阶段构建，将前端和后端打包为单个镜像：
 
-Vercel 同时承载前端静态资源和 Serverless API。
+- 阶段 1：构建前端（Vite → 静态文件）
+- 阶段 2：编译后端（tsc → dist/）
+- 阶段 3：Node 20 Alpine 运行时，后端同时提供 API 和前端静态页面
 
-1. Fork 本仓库到你的 GitHub 账号
-2. 登录 [vercel.com](https://vercel.com)，点击 **New Project** 导入仓库
-3. Vercel 会自动读取根目录的 `vercel.json`：
-   - 构建命令：`cd bilimedia-frontend && npm install && npm run build`
-   - 输出目录：`bilimedia-frontend/dist`
-   - API 函数：`api/**/*.ts`（超时 60 秒）
-4. （可选）在 Project Settings → Environment Variables 配置环境变量（见[环境变量](#环境变量)）
-5. 点击 Deploy，等待构建完成
-6. 部署成功后通过 `https://<your-project>.vercel.app` 访问
+一个容器、一个端口（80），前后端同源，无需 CORS 配置。
 
-> **注意**：`vercel.json` 中的 SPA 重写规则会将所有非 `/api` 路径回退到 `index.html`，支持客户端路由。
+**构建镜像：**
+
+```bash
+docker build -t bilimedia:latest .
+```
+
+**运行容器：**
+
+```bash
+docker run -d \
+  --name bilimedia \
+  -p 80:80 \
+  -e BILIMEDIA_JWT_SECRET="your-random-secret-here" \
+  -v bilimedia-data:/app/data \
+  --restart unless-stopped \
+  bilimedia:latest
+```
+
+访问 `http://<服务器IP>` 即可使用完整功能（前端 + API 同源）。
+
+**环境变量：**
+
+| 变量 | 说明 | 默认值 |
+| --- | --- | --- |
+| `PORT` | 监听端口 | `80` |
+| `BILIMEDIA_JWT_SECRET` | JWT 签名密钥 | 内置演示密钥（**生产务必修改**） |
+| `BILIMEDIA_DATA_DIR` | 本地 JSON 存储目录 | `/app/data` |
+| `BILIMEDIA_FRONTEND_DIST` | 前端静态文件路径 | `/app/public`（Docker 默认） |
+| `BILIMEDIA_STORAGE_TOKEN` | GitHub PAT（配置后走 GitHub 存储） | 无（走本地 JSON） |
+| `BILIMEDIA_STORAGE_REPO` | GitHub 仓库 `owner/repo` | `RoderickWilliams/BiliMedia` |
+| `BILIMEDIA_STORAGE_BRANCH` | 数据存储分支 | `main` |
+
+> 未配置 `BILIMEDIA_STORAGE_TOKEN` 时，数据写入容器内 `/app/data` 目录（JSON 文件）。使用 Docker volume 可确保持久化。
+
+### 腾讯云 CloudBase 云托管
+
+腾讯云 CloudBase 云托管支持直接从 GitHub 仓库或容器镜像部署，自带国内 CDN 域名和免费额度。服务器使用国内 IP 出口，B 站解析和网易云音乐识别均可正常工作。腾讯云域名从海外也可访问，无需为海外用户做特殊处理。
+
+**方式一：从 GitHub 仓库部署**
+
+1. 登录 [腾讯云 CloudBase 控制台](https://console.cloud.tencent.com/tcb)
+2. 创建云托管环境（或使用已有环境）
+3. 进入 **云托管 → 服务列表 → 新建服务**
+4. 部署方式选择 **GitHub 仓库**，授权并选择 `BiliMedia` 仓库
+5. 端口填 `80`
+6. 高级配置中添加环境变量 `BILIMEDIA_JWT_SECRET`
+7. 部署完成后获得 `https://<service>-<env>.tcloudbaseapp.com` 域名
+
+**方式二：用 Docker 镜像部署**
+
+```bash
+# 在本地构建并推送到腾讯云容器镜像服务（TCR）
+docker build -t bilimedia:latest .
+docker tag bilimedia:latest ccr.ccs.tencentyun.com/<your-namespace>/bilimedia:latest
+docker push ccr.ccs.tencentyun.com/<your-namespace>/bilimedia:latest
+```
+
+然后在 CloudBase 控制台选择 **镜像拉取**，填入 TCR 镜像地址。
+
+> 根级 Dockerfile 已将前后端打包到同域，无需配置 `VITE_API_ORIGIN`。前端自动走同源 `/api`。
 
 ### 部署到 GitHub Pages
 
-GitHub Pages 仅托管前端静态资源，API 请求直接打到 Vercel 或 Deno 反代。
+GitHub Pages 仅托管前端静态资源。如果同时使用腾讯云 Docker 全栈部署，前端页面和 API 在腾讯云域名下同源访问，GitHub Pages 仅作为备用入口。
 
-仓库已配置 GitHub Actions 工作流（`.github/workflows/deploy-pages.yml`），推送到 `main` 分支会自动：
-
-1. 使用 Node 22 安装依赖
-2. 以 `PAGES_DEPLOY=1` 构建（自动设置 `base: '/BiliMedia/'`，并生成 `404.html` 用于 SPA 回退）
-3. 通过 `configure-pages` / `upload-pages-artifact` / `deploy-pages` 部署
-
-**首次使用前需要在 GitHub 仓库设置中开启 Pages：**
+仓库已配置 GitHub Actions 工作流，推送到 `main` 分支自动构建部署：
 
 1. 进入仓库 **Settings → Pages**
-2. **Build and deployment → Source** 选择 **GitHub Actions**
-3. 推送代码到 `main` 分支，等待 Actions 构建完成
+2. **Source** 选择 **GitHub Actions**
+3. 推送代码，等待 Actions 完成
 4. 访问 `https://<username>.github.io/BiliMedia/`
 
-> **Action 版本兼容性**：项目已将所有 action 升级到 Node 24 兼容版本（checkout@v5、setup-node@v5、configure-pages@v6、upload-pages-artifact@v5、deploy-pages@v5），避免 GitHub runner 强制升级导致的构建失败。
-
-### 部署 Deno Deploy 反代（国内无代理用户）
-
-Deno Deploy 在国内网络下可达，用于中转对 Vercel 的 API 请求。
-
-1. 注册 [Deno Deploy](https://deno.com/deploy)
-2. 创建新项目，选择 **Deploy from GitHub** 或直接粘贴 `deno-proxy/main.ts`
-3. 入口文件设为 `deno-proxy/main.ts`
-4. 部署后获得 `https://<your-app>.deno.dev` 域名
-5. 修改 `bilimedia-frontend/src/services/api.ts` 中的反代地址常量，或通过后续配置使其指向你的域名
-
-反代会将所有请求原样转发到 `https://bili-media.vercel.app`，并补齐 CORS 头，支持流式响应透传。
+> 如果前端部署在 GitHub Pages 而后端在腾讯云，需要在构建时设置 `VITE_API_ORIGIN=https://your-tencent-domain`。可在 GitHub 仓库 **Settings → Secrets and variables → Actions** 中添加 `VITE_API_ORIGIN` 变量，并在 workflow 的 build 步骤中传入。
 
 ---
 
 ## 环境变量
 
-在 Vercel 项目设置中配置以下环境变量（均为可选，不配置时有合理兜底）：
+### Express / Docker 后端
 
 | 变量名 | 说明 | 默认值 |
 | --- | --- | --- |
-| `BILIMEDIA_JWT_SECRET` | JWT 签名密钥 | 内置演示密钥（**生产环境务必修改**） |
-| `BILIMEDIA_STORAGE_TOKEN` | GitHub Personal Access Token，用于数据持久化 | 内置兜底 Token |
-| `BILIMEDIA_STORAGE_REPO` | 数据存储的 GitHub 仓库（`owner/repo`） | `RoderickWilliams/BiliMedia` |
-| `BILIMEDIA_STORAGE_BRANCH` | 数据存储分支 | `main` |
-| `GITHUB_TOKEN` | Vercel 自动注入的 GitHub Token（Vercel 集成时可用） | — |
-| `GITHUB_REPOSITORY` | Vercel 自动注入的仓库名 | — |
+| `PORT` | HTTP 监听端口 | `5000`（开发）/ `80`（Docker） |
+| `BILIMEDIA_JWT_SECRET` | JWT 签名密钥 | 内置演示密钥 |
+| `BILIMEDIA_DATA_DIR` | 本地 JSON 数据目录 | `./data` |
+| `BILIMEDIA_FRONTEND_DIST` | 前端静态文件目录 | 自动推断 |
+| `BILIMEDIA_STORAGE_TOKEN` | GitHub PAT（配置后走 GitHub 存储） | 无 |
+| `BILIMEDIA_STORAGE_REPO` | 数据仓库 `owner/repo` | `RoderickWilliams/BiliMedia` |
+| `BILIMEDIA_STORAGE_BRANCH` | 数据分支 | `main` |
+| `NETEASE_API_BASE` | 网易云 API 地址（可选） | 内置默认值 |
 
-> **数据存储说明**：项目使用 GitHub Contents API 读写仓库中的 `data/store.json` 和 `data/users.json`，无需数据库。如果没有配置 Token，会降级到进程内内存缓存（重启丢失），但不影响首次体验。
+### 前端构建时
+
+| 变量名 | 说明 |
+| --- | --- |
+| `VITE_API_ORIGIN` | 后端 API 地址（前后端不同域时设置，如 GitHub Pages + 腾讯云 API） |
+
+前端 API 地址解析逻辑：
+
+1. 如果设置了 `VITE_API_ORIGIN`，使用该地址 + `/api`
+2. 否则使用同源 `/api`（Docker 同域部署、本地开发 Vite 代理均走此路径）
 
 ---
 
@@ -293,7 +331,7 @@ Deno Deploy 在国内网络下可达，用于中转对 Vercel 的 API 请求。
     "pubdate": "2026-01-01",
     "description": "...",
     "views": 10000,
-    "defaultVideoUrl": "...",
+    "defaultVideoUrl": "https://...",
     "qualityOptions": [
       { "qn": 80, "label": "1080P 高清", "sub": "1080P", "available": true, "sizeEstimateMB": 114 }
     ],
@@ -304,60 +342,29 @@ Deno Deploy 在国内网络下可达，用于中转对 Vercel 的 API 请求。
 
 ### `POST /api/recognize` — 识别背景音乐
 
-**请求体**
-
 ```json
 { "title": "视频标题", "author": "UP主" }
 ```
 
-**响应**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "accuracy": 85.5,
-    "total": 5,
-    "list": [
-      {
-        "id": 12345,
-        "name": "歌曲名",
-        "artists": "艺人",
-        "album": "专辑",
-        "cover": "https://...",
-        "duration": 240,
-        "durationText": "04:00",
-        "mp3Url": "https://...",
-        "available": true,
-        "source": "网易云音乐",
-        "matchScore": 0.92
-      }
-    ]
-  }
-}
-```
+返回匹配度评分、歌曲列表（含网易云试听/下载 URL）。
 
 ### `GET /api/download/video` — 视频下载代理
 
-**Query 参数**
-
 | 参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `bvid` | string | ✅ | 视频 BV 号 |
-| `cid` | number | ✅ | 视频 CID |
+| `bvid` | string | ✅ | BV 号 |
+| `cid` | number | ✅ | CID |
 | `qn` | number | ❌ | 清晰度码（默认 80=1080P） |
-| `filename` | string | ❌ | 下载文件名（不含扩展名） |
+| `filename` | string | ❌ | 下载文件名 |
 
-返回 `video/mp4` 流式响应，支持 Range 请求。
+返回 `video/mp4` 流式响应，支持 Range。
 
 ### `GET /api/download/music` — 音乐下载代理
 
-**Query 参数**
-
 | 参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `url` | string | ✅ | 音乐 MP3 URL（需 URL 编码） |
-| `name` | string | ❌ | 下载文件名 |
+| `url` | string | ✅ | 音乐 MP3 URL（URL 编码） |
+| `name` | string | ❌ | 文件名 |
 
 返回 `audio/mpeg` 流式响应。
 
@@ -367,8 +374,6 @@ Deno Deploy 在国内网络下可达，用于中转对 Vercel 的 API 请求。
 { "username": "user", "email": "user@example.com", "password": "xxx" }
 ```
 
-返回 JWT Token 和用户信息。
-
 ### `POST /api/auth/login` — 登录
 
 ```json
@@ -377,7 +382,7 @@ Deno Deploy 在国内网络下可达，用于中转对 Vercel 的 API 请求。
 
 ### `GET /api/data?bucket=<bucket>` — 读取用户数据
 
-需要 `Authorization: Bearer <token>` 头。`bucket` 可选值：`downloads`、`music`、`favorites`、`all`。
+需要 `Authorization: Bearer <token>`。`bucket`：`downloads`、`music`、`favorites`、`all`。
 
 ### `POST /api/data?bucket=<bucket>` — 写入用户数据
 
@@ -385,46 +390,70 @@ Deno Deploy 在国内网络下可达，用于中转对 Vercel 的 API 请求。
 { "record": { ... } }
 ```
 
+### `GET /health` — 健康检查
+
+```json
+{ "ok": true, "ts": 1787462072386, "env": "production" }
+```
+
 ---
 
-## 国内无代理访问说明
+## 网络架构说明
 
-项目针对国内无系统代理的新电脑做了以下专项优化：
+### 为什么海外服务器不能解析 B 站？
 
-1. **Inter 字体本地化**：移除了对 `fonts.googleapis.com` 的依赖，5 个字重的 woff2 文件放在 `public/fonts/`，通过 CSS `@font-face` 本地加载，避免页面白屏。
-2. **Deno Deploy 反代**：前端 `resolveApiBase()` 会根据当前域名自动选择 API 入口：
-   - `localhost` / `*.vercel.app` → 直接走 `/api` 同源
-   - `github.io` 等其他域名 → 走 Vercel 直连或 Deno 反代
-3. **CORS 全开放**：所有 Serverless Function 设置 `Access-Control-Allow-Origin: *`，支持任意域名前端跨域调用。
-4. **GitHub Actions 已适配 Node 24**：不会因 runner 升级导致构建失败。
+B 站 API（`api.bilibili.com`）会校验请求来源 IP：
+
+- **国内 IP**：返回 `code: 0`，完整视频数据
+- **海外 IP**：返回 `code: -404`，message: `"啥都木有"`
+
+网易云音乐搜索 API 同样对海外 IP 返回空结果。因此后端必须部署在国内服务器上。
+
+### 推荐部署架构
+
+```
+用户（国内 / 海外）
+    │
+    │  访问腾讯云域名（国内外均可解析）
+    │
+    ▼
+腾讯云 Docker 容器（国内 IP 出口）
+    ├── 前端静态页面（同源）
+    ├── API 接口
+    │
+    ├── api.bilibili.com     ✅ 国内 IP 直连
+    └── music.126.com        ✅ 国内 IP 直连
+```
+
+腾讯云服务器以国内 IP 请求 B 站和网易云 API，无论用户来自国内还是海外，功能均正常可用。
 
 ---
 
 ## 常见问题
 
-### Q: 视频解析失败？
+### Q: 视频解析返回"啥都木有"？
 
-B 站对未登录用户的高清晰度（4K/2K/1080P+）有限制，部分视频可能只返回 720P 或 480P。可以尝试更换视频链接，或在后端配置 B 站登录 Cookie（需二次开发）。
+这是 B 站 API 对海外 IP 的封锁响应。解决方法：将后端部署到国内服务器（腾讯云、阿里云等）。本地开发（国内 IP）不会有此问题。
 
-### Q: 音乐识别不准？
+### Q: 音乐识别返回 0 条结果？
 
-识别基于标题关键词匹配，视频标题中如果含有大量噪声词（如音效、翻唱、remix 等）可能影响准确度。算法已对常见清晰度标签（4K/1080P/超清）和修饰词（官方/完整版/MV）做了过滤，但无法做到 100% 准确。
+网易云音乐搜索 API 同样对海外 IP 有限制。和视频解析一样，需要国内 IP 的后端。
 
-### Q: Vercel 被限流？
+### Q: 高清晰度视频不可用？
 
-Vercel 免费版有函数调用频率限制（Hobby 计划每月 100,000 次）。如果触发限流，前端会通过 Deno Deploy 反代重试。长期大量使用建议升级 Vercel Pro 或自行部署后端。
-
-### Q: 本地开发时 `npm install` 报 esbuild 错误？
-
-确保 `node` 在系统 PATH 中。Windows 用户可以直接使用项目根目录的 `start-BiliMedia.bat`，它会自动处理 PATH。如果 Node.js 未安装，推荐放到 `F:\项目\_tools\nodejs\`（与 bat 脚本同级目录的 `_tools`）。
+B 站对未登录用户的高清晰度（4K/2K/1080P+）有限制，部分视频可能只返回 720P。可在后端配置 B 站登录 Cookie（需二次开发）。
 
 ### Q: 数据存在哪里？
 
-默认通过 GitHub Contents API 存在仓库的 `data/` 目录下（JSON 文件）。你也可以配置 `BILIMEDIA_STORAGE_TOKEN` / `BILIMEDIA_STORAGE_REPO` 使用自己的仓库。未配置 Token 时降级到内存存储，重启数据丢失。
+默认写入本地 JSON 文件（`BILIMEDIA_DATA_DIR`），配置 GitHub Token 后走 GitHub Contents API。Docker 部署时建议挂载 volume 持久化 `/app/data` 目录。
 
 ### Q: 如何修改 JWT 密钥？
 
-在 Vercel 环境变量中设置 `BILIMEDIA_JWT_SECRET` 为一个随机字符串即可。修改后所有已签发的 Token 会失效，用户需要重新登录。
+设置环境变量 `BILIMEDIA_JWT_SECRET` 为随机字符串。修改后所有已签发 Token 失效。
+
+### Q: Windows 本地启动时 Start-Process 报错？
+
+PowerShell 的 `Start-Process` 在修改了 `$env:PATH` 后可能因 Path/PATH 重复键报错。直接使用项目提供的 `start-BiliMedia.bat`，或用 `cmd.exe /c` 包装启动命令。
 
 ---
 
