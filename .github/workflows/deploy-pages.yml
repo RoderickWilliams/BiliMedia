@@ -17,9 +17,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: bilimedia-frontend
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -31,16 +28,31 @@ jobs:
           cache: npm
           cache-dependency-path: bilimedia-frontend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install root deps (@vercel/node imports)
+        run: npm install --no-audit --no-fund
+
+      - name: Install frontend deps
+        working-directory: bilimedia-frontend
         run: npm install --no-audit --no-fund
 
       - name: Build (GitHub Pages target)
+        working-directory: bilimedia-frontend
         env:
           PAGES_DEPLOY: '1'
         run: npm run build
 
+      - name: SPA fallback: ensure 404.html matches index.html
+        working-directory: bilimedia-frontend
+        run: |
+          if [ ! -f dist/404.html ] || ! diff dist/index.html dist/404.html >/dev/null 2>&1; then
+            cp dist/index.html dist/404.html
+          fi
+        shell: bash
+
       - name: Setup Pages
         uses: actions/configure-pages@v6
+        with:
+          static_site_generator: vite
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
