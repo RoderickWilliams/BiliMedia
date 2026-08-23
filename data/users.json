@@ -6,5 +6,13 @@
     "passwordHash": "30464a4285c6969ce46c627cdfd78e8d27874ffcd5c76f4f59a3d6fb69484cd7",
     "salt": "3488b920c6603072",
     "createdAt": 1787460829800
+  },
+  {
+    "id": "mt5crovf6tz0rb",
+    "username": "test",
+    "email": "t@t.com",
+    "passwordHash": "b86fc24e6885698fc660fd1ff8428cfcc3deaeddd7e8dde08c7d94f8ca949cc9",
+    "salt": "392926d5a9039f4f",
+    "createdAt": 1787462076075
   }
 ]
