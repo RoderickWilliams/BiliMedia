@@ -14,5 +14,13 @@
     "passwordHash": "b86fc24e6885698fc660fd1ff8428cfcc3deaeddd7e8dde08c7d94f8ca949cc9",
     "salt": "392926d5a9039f4f",
     "createdAt": 1787462076075
+  },
+  {
+    "id": "mt5diaalnkcyy6",
+    "username": "finaltest",
+    "email": "final@test.com",
+    "passwordHash": "64b744028047480f9c32527f6f86c9a6e48e1d2c94046bab38968c78226bf051",
+    "salt": "e71d45ba78875033",
+    "createdAt": 1787463316893
   }
 ]
