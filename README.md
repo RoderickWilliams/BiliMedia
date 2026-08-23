@@ -1,295 +1,190 @@
 # BiliMedia
 
-> B 站视频高清解析下载 + 网易云背景音乐识别
+BiliMedia — B站视频高清解析下载 + 视频背景音乐网易云音乐识别 + 一键下载的 SaaS 应用。
 
-粘贴 B 站视频链接，一键获取视频信息、多档清晰度下载，并智能识别视频所用的背景音乐（网易云音乐），支持在线试听与下载。
+## 在线体验
 
-## 快速开始
+| 部署入口      | URL                                                | 适用场景                                                |
+| ------------- | -------------------------------------------------- | ------------------------------------------------------- |
+| **Vercel**    | https://bili-media.vercel.app                      | 海外 IP / 有代理；所有 API 同源访问                     |
+| **GitHub Pages** | https://roderickwilliams.github.io/BiliMedia/   | **国内无代理用户（推荐）**；API 经 Deno Deploy 反代中转 |
 
-### 方式一：Docker（最简单）
+> 数据同步说明：两个入口共用同一个后端（Vercel Serverless Functions），所以在任意一处注册/登录、下载/收藏记录都会在另一处看到同一用户的数据。
 
-需要安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)。
+## 功能
 
-```bash
-git clone https://github.com/RoderickWilliams/BiliMedia.git
-cd BiliMedia
-docker compose up -d
-```
-
-浏览器打开 <http://localhost:5000>，完成。
-
-停止服务：`docker compose down`
-
-### 方式二：Node.js 一键启动
-
-需要安装 [Node.js](https://nodejs.org/) 18+（安装时勾选 Add to PATH）。
-
-**Windows：** 双击 `start.bat`，首次运行会自动安装依赖并构建，之后打开 <http://localhost:5000>。
-
-**macOS / Linux：**
-
-```bash
-git clone https://github.com/RoderickWilliams/BiliMedia.git
-cd BiliMedia
-
-# 安装依赖 + 构建
-cd bilimedia-backend && npm install && npm run build && cd ..
-cd bilimedia-frontend && npm install && npm run build && cd ..
-
-# 启动（后端同时提供 API 和前端页面）
-cd bilimedia-backend
-PORT=5000 NODE_ENV=production \
-  BILIMEDIA_FRONTEND_DIST=../bilimedia-frontend/dist \
-  BILIMEDIA_DATA_DIR=./data \
-  node dist/index.js
-```
-
-浏览器打开 <http://localhost:5000>。
-
-### 方式三：开发模式（前后端分离）
-
-适合二次开发，前端热更新：
-
-```bash
-# 终端 1 - 后端
-cd bilimedia-backend
-npm install
-npm run dev          # http://localhost:5000
-
-# 终端 2 - 前端
-cd bilimedia-frontend
-npm install
-npm run dev          # http://localhost:5173
-```
-
-Vite 已配置代理，`/api/*` 自动转发到后端 5000 端口。打开 <http://localhost:5173>。
-
-> ⚠️ B 站和网易云 API 对海外 IP 有限制，视频解析和音乐识别需要在**国内网络环境**下使用（本机直连即可，无需代理）。
-
----
-
-## 功能特性
-
-### 🎬 B 站视频解析下载
-
-- 支持 BV 号 / AV 号链接自动识别
-- 自动提取视频元信息：标题、UP 主、封面、时长、发布日期、播放量、简介
-- 多档清晰度可选：4K（2160P）/ 2K（1440P）/ 1080P / 720P
-- 文件大小预估
-- 服务端流式代理下载，自动处理 Referer 校验和防盗链
-- 支持 HTTP Range 断点续传
-
-### 🎵 网易云背景音乐识别
-
-- 基于视频标题 + UP 主信息智能清洗关键词，过滤"4K/1080P/官方/完整版"等噪声词
-- 多策略匹配网易云音乐曲库，返回匹配度评分
-- 展示歌曲名、艺人、专辑、封面、时长
-- 在线试听 + MP3 下载
-
-### 👤 用户系统
-
-- 注册 / 登录（JWT 鉴权，30 天有效期）
-- 密码 SHA-256 + 每用户随机盐值哈希
-- 下载历史、音乐识别记录、收藏夹持久化
-
-### 🎨 产品体验
-
-- React 18 + TypeScript + Tailwind CSS 4，响应式现代 UI
-- Inter 字体本地化，不依赖 Google Fonts
-- 暗色主题、侧边栏导航、卡片式布局
-- 纯前端 SPA，支持客户端路由
-
----
-
-## 技术栈
-
-| 层级 | 技术 |
-| --- | --- |
-| 前端 | React 18、TypeScript 5、Vite 5、Tailwind CSS 4、Axios |
-| 后端 | Express 5、TypeScript |
-| 容器化 | Docker（多阶段构建，Node 20 Alpine） |
-| 数据存储 | 本地 JSON 文件（默认）或 GitHub Contents API |
-| 鉴权 | 自实现 HMAC-SHA256 JWT（node:crypto） |
-| 外部 API | Bilibili Web API、网易云音乐 Web API |
-
----
+- 📺 **B站视频解析**：粘贴任意含 BV/AV 号的链接，解析视频标题、封面、时长、UP主、多档清晰度直链
+- 📥 **视频下载**：4K / 2K / 1080P / 720P 多档选择，实时拉取直链避免过期
+- 🎵 **视频音乐识别**：输入视频标题+UP主，在网易云音乐曲库匹配对应歌曲并给出候选
+- 🔊 **音乐下载**：网易云音乐支持的歌曲可直接下载 MP3
+- 👤 **用户系统**：注册/登录（JWT），下载历史、音乐识别历史、收藏夹云端同步
+- 🌏 **国内无代理访问**：GitHub Pages + Deno Deploy 反代，无需梯子即可使用完整功能
 
 ## 项目结构
 
 ```
 BiliMedia/
-├── bilimedia-frontend/             # 前端（React + Vite）
-│   ├── src/
-│   │   ├── components/             #   UI 组件
-│   │   ├── pages/                  #   页面
-│   │   ├── services/
-│   │   │   ├── api.ts              #     Axios 实例 + API 封装
-│   │   │   └── auth.tsx            #     Auth Context
-│   │   ├── App.tsx
-│   │   ├── main.tsx
-│   │   └── index.css
-│   ├── public/fonts/               #   Inter 字体（本地化）
-│   ├── index.html
-│   ├── vite.config.mts
+├── api/                          # Vercel Serverless Functions（7 个端点）
+│   ├── auth/login.ts
+│   ├── auth/register.ts
+│   ├── data.ts                   # 下载/音乐/收藏统一数据接口
+│   ├── download/music.ts
+│   ├── download/video.ts
+│   ├── parse.ts                  # B站视频解析
+│   └── recognize.ts              # 网易云音乐识别
+├── lib/                          # 共享业务库（供 api/* 导入）
+│   ├── bilibili.ts               # Bilibili 公共请求 + playurl
+│   ├── http.ts                   # CORS / ok/fail / bearer 工具
+│   ├── jwt.ts                    # HMAC-SHA256 JWT + 密码哈希
+│   ├── netease.ts                # 网易云搜索 + 详情 + 音源
+│   └── storage.ts                # GitHub Contents API 持久化存储
+├── bilimedia-frontend/           # React 18 + TypeScript + Vite + Tailwind v4
+│   ├── src/components/           # Topbar / Sidebar / VideoCard / LoginModal ...
+│   ├── src/pages/                # Home / DownloadHistory / MusicHistory / Favorites / Settings
+│   ├── src/services/api.ts       # API 客户端 & 下载链接构造
+│   ├── src/services/auth.tsx     # AuthContext（JWT 全局状态）
+│   ├── vite.config.mts           # 根据 PAGES_DEPLOY 切换 base='/BiliMedia/'
 │   └── package.json
-│
-├── bilimedia-backend/              # 后端（Express）
-│   ├── src/
-│   │   ├── index.ts                #   Express 入口
-│   │   ├── routes/
-│   │   │   ├── parse.ts            #     视频解析
-│   │   │   ├── recognize.ts        #     音乐识别
-│   │   │   ├── download.ts         #     下载代理
-│   │   │   ├── auth.ts             #     登录/注册
-│   │   │   └── data.ts             #     用户数据 CRUD
-│   │   └── services/
-│   │       ├── bilibili.ts         #     B 站 API
-│   │       ├── netease.ts          #     网易云 API
-│   │       ├── jwt.ts              #     JWT 服务
-│   │       └── storage.ts          #     本地 JSON / GitHub 双模式存储
-│   └── package.json
-│
-├── .github/workflows/
-│   └── deploy-pages.yml            # GitHub Actions → Pages
-├── Dockerfile                      # 多阶段构建（前后端一体镜像）
-├── docker-compose.yml              # Docker Compose 配置
-├── .dockerignore
-├── .gitignore
-├── start.bat                       # Windows 一键启动
-└── README.md
+├── bilimedia-backend/            # 独立后端（可选，本地用）
+├── deno-proxy/main.ts            # Deno Deploy 反代（国内无代理中转）
+├── data/                         # 存储 JSON（users.json、store.json）
+├── .github/workflows/deploy-pages.yml   # GitHub Actions 自动构建 + 部署 Pages
+├── vercel.json                   # Vercel 构建/路由/函数配置
+├── tsconfig.json                 # api + lib 的 TypeScript 配置
+├── package.json                  # 根目录通用脚本（含 build）
+└── deploy.py                     # 一键部署脚本（Contents API 绕过 git push）
 ```
 
----
+## 别人如何克隆并本地运行
 
-## 环境变量
+### 0. 前置要求
 
-### 后端
+- Node.js **22+**（工作流和 Vercel 均使用 Node 22）
+- npm（或 pnpm/yarn 自行替换）
+- 可选：Vercel 账号（本地运行不需要）；GitHub 账号（克隆公共仓库不需要）
 
-| 变量名 | 说明 | 默认值 |
-| --- | --- | --- |
-| `PORT` | HTTP 监听端口 | `5000` |
-| `BILIMEDIA_JWT_SECRET` | JWT 签名密钥 | 内置演示密钥 |
-| `BILIMEDIA_DATA_DIR` | 本地 JSON 数据目录 | `./data` |
-| `BILIMEDIA_FRONTEND_DIST` | 前端静态文件目录 | 自动推断 |
-| `BILIMEDIA_STORAGE_TOKEN` | GitHub PAT（配置后数据存 GitHub） | 无（存本地 JSON） |
-| `BILIMEDIA_STORAGE_REPO` | 数据仓库 `owner/repo` | `RoderickWilliams/BiliMedia` |
-| `BILIMEDIA_STORAGE_BRANCH` | 数据分支 | `main` |
+### 1. 克隆
 
-### 前端构建时
-
-| 变量名 | 说明 |
-| --- | --- |
-| `VITE_API_ORIGIN` | 后端 API 地址（前后端不同域时设置） |
-
-前端 API 地址解析逻辑：设置了 `VITE_API_ORIGIN` 时使用该地址 + `/api`，否则使用同源 `/api`（Docker、本地开发均走此路径，无需配置）。
-
----
-
-## API 文档
-
-所有 API 返回统一格式：
-
-```typescript
-// 成功
-{ "ok": true, "data": { ... } }
-// 失败
-{ "ok": false, "message": "错误信息" }
+```bash
+git clone https://github.com/RoderickWilliams/BiliMedia.git
+cd BiliMedia
 ```
 
-### `POST /api/parse` — 解析 B 站视频
+### 2. 安装依赖（一次性）
 
-```json
-{ "url": "https://www.bilibili.com/video/BVxxxxx" }
+```bash
+# 根目录（@vercel/node + axios + 根脚本）
+npm install --no-audit --no-fund
+# 前端
+cd bilimedia-frontend && npm install --no-audit --no-fund && cd ..
+# 后端（本地想跑 Express 版时执行）
+cd bilimedia-backend && npm install --no-audit --no-fund && cd ..
 ```
 
-返回视频标题、UP 主、封面、时长、清晰度选项及下载地址。
+### 3. 配置环境变量（可选，影响存储方式）
 
-### `POST /api/recognize` — 识别背景音乐
+在 BiliMedia 根目录新建 `.env`（或在系统环境变量中设置）：
 
-```json
-{ "title": "视频标题", "author": "UP主" }
+```
+# JWT 签名密钥（强烈建议生产设置，否则会使用内置值）
+BILIMEDIA_JWT_SECRET=随便一串长字符串
+
+# 存储后端：GitHub Contents API 持久化（不设置则降级为服务器内存，重启丢失）
+BILIMEDIA_STORAGE_TOKEN=ghp_xxx                # 需要 contents 权限的 PAT
+BILIMEDIA_STORAGE_REPO=RoderickWilliams/BiliMedia
+BILIMEDIA_STORAGE_BRANCH=main
 ```
 
-返回匹配度评分和歌曲列表（含网易云试听/下载 URL）。
+> **说明**：
+> - 如果不设置 `BILIMEDIA_STORAGE_TOKEN`，`lib/storage.ts` 会自动降级为**进程内内存**。本地试用完全没问题，但进程重启后用户/数据会丢失。
+> - 如果使用 GitHub 作为存储，Token 需要至少 `contents: read&write` 权限。
 
-### `GET /api/download/video` — 视频下载代理
+### 4. 本地开发
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `bvid` | string | ✅ | BV 号 |
-| `cid` | number | ✅ | CID |
-| `qn` | number | ❌ | 清晰度码（默认 80=1080P） |
-| `filename` | string | ❌ | 下载文件名 |
+**方式 A：使用 Vercel 函数模拟（推荐，最接近线上）**
 
-返回 `video/mp4` 流式响应，支持 Range。
-
-### `GET /api/download/music` — 音乐下载代理
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `url` | string | ✅ | 音乐 MP3 URL（URL 编码） |
-| `name` | string | ❌ | 文件名 |
-
-返回 `audio/mpeg` 流式响应。
-
-### `POST /api/auth/register` — 注册
-
-```json
-{ "username": "user", "email": "user@example.com", "password": "xxx" }
+```bash
+# 安装 Vercel CLI（一次性）
+npm i -g vercel
+# 首次执行会让你选择项目，选 bili-media 或按提示连接
+vercel dev
+# 默认监听 3000：前端 + api 都有
 ```
 
-### `POST /api/auth/login` — 登录
+**方式 B：前端 + 本地 Express 后端**
 
-```json
-{ "username": "user", "password": "xxx" }
+```bash
+# 终端 1（后端，5000 端口）
+cd bilimedia-backend && npm start
+# 终端 2（前端，5173 端口，Vite 代理已把 /api -> localhost:5000）
+cd bilimedia-frontend && npm run dev
 ```
 
-### `GET /api/data?bucket=<bucket>` — 读取用户数据
+然后浏览器打开 http://localhost:5173
 
-需要 `Authorization: Bearer <token>`。bucket：`downloads`、`music`、`favorites`、`all`。
+### 5. 本地构建
 
-### `POST /api/data?bucket=<bucket>` — 写入用户数据
-
-```json
-{ "record": { ... } }
+```bash
+# 在仓库根目录执行
+npm run build
+# 前端产物位于 bilimedia-frontend/dist
 ```
 
-### `GET /health` — 健康检查
+## 别人如何部署到自己的账号
 
-```json
-{ "ok": true, "ts": 1787462072386, "env": "production" }
+### 一键部署 Vercel
+
+将仓库 Fork 到自己 GitHub → 登录 Vercel → **Add New → Project** → 导入 Fork 后的仓库 → 直接 Deploy 即可。Vercel 会读取仓库根目录的 `vercel.json`，自动：
+
+1. 执行 `buildCommand`（安装前端依赖并构建）
+2. 设置 `outputDirectory=bilimedia-frontend/dist` 作为静态产物
+3. 识别 `api/**/*.ts` 为 Serverless Functions
+4. 应用 SPA rewrites（所有非 `/api/*` 的路径回到 `/index.html`）
+
+### 一键部署 GitHub Pages
+
+GitHub Actions 工作流 `.github/workflows/deploy-pages.yml` 会在 push 到 `main` 或手动触发时：
+
+1. 使用 Node 22 安装根和前端依赖
+2. 以 `PAGES_DEPLOY=1` 构建（vite.config.mts 把 `base` 切换为 `/<仓库名>/`）
+3. 通过 `actions/deploy-pages@v5` 部署到 GitHub Pages
+
+需要先在 GitHub 仓库的 **Settings → Pages → Source** 选择 **GitHub Actions**。
+
+### 一键部署 Deno 反代（国内无代理用户体验用）
+
+1. 在 Deno Deploy 创建新项目，选择从 GitHub 仓库的 `deno-proxy/main.ts` 部署
+2. 将获得的 `*.deno.net` URL 写入前端 `bilimedia-frontend/src/services/api.ts` 的 `DENO_PROXY_ORIGIN` 常量
+3. 重新部署 Vercel / GitHub Pages
+
+## 一键部署脚本（自动化工具）
+
+如果国内网络导致 `git push` 不稳定，直接使用：
+
+```bash
+python deploy.py                # 同步所有修改 -> GitHub Contents API -> 触发 Vercel + Actions
+python deploy.py --health       # 仅健康检查（Pages/Vercel/Deno + 7条 API 全链路）
+python deploy.py --pages-manual # 额外手动推送 dist -> gh-pages（Actions 失败时的兜底）
 ```
 
----
+依赖：仅 Python 3.8+，无需第三方包。通过 GitHub Contents API 直接 PUT，不走 git 协议。
 
-## 常见问题
+## 已知限制 & 提示
 
-### Q: 视频解析返回"啥都木有"？
+1. **B站风控**：`/api/parse` 解析 B 站视频时，调用方的出口 IP（Vercel / Deno Deploy 或你本地网络）会被 Bilibili 风控，可能返回「啥都木有」或 code != 0 的错误。这种情况是 B 站的服务器端防盗链，通常**切换网络环境或更换时段即可**。海外节点、家用宽带 IP 成功率更高。
+2. **网易云音源**：受版权、登录态影响，部分歌曲可能返回 `mp3Url = null`，但歌曲候选仍然可用，用户可去网易云客户端自行搜索。
+3. **Token workflow 权限**：当前 `ghp_...` Token 缺少 GitHub 官方 `workflow` scope，导致**工作流 YAML 文件无法通过 API 推送**。如需修改 `.github/workflows/*.yml`，请：
+   - 在 GitHub Web UI 手动编辑，或
+   - 生成**带 workflow scope 的新 PAT**，设置到 `GITHUB_TOKEN` 环境变量后再运行 `deploy.py` 或 `git push`。
 
-B 站 API 对海外 IP 返回 `-404`。请在国内网络环境下使用，关闭系统代理。
+## 维护小抄
 
-### Q: 音乐识别返回 0 条结果？
-
-网易云搜索 API 同样对海外 IP 有限制，和视频解析一样需要国内 IP。
-
-### Q: 高清晰度视频不可用？
-
-B 站对未登录用户的高清晰度（4K/2K）有限制，部分视频可能只返回 1080P 或 720P。
-
-### Q: 数据存在哪里？
-
-默认写入本地 JSON 文件（`bilimedia-backend/data/`）。配置 GitHub Token 后可走 GitHub Contents API 远程存储。Docker 部署时数据通过 named volume 持久化。
-
-### Q: start.bat 提示找不到 Node.js？
-
-请安装 [Node.js](https://nodejs.org/) 18+，安装时务必勾选 "Add to PATH"，安装后重新打开命令行再运行。
-
-### Q: Docker 方式如何修改端口？
-
-编辑 `docker-compose.yml`，将 `"5000:80"` 中的 `5000` 改为想要的端口即可。
-
----
-
-## License
-
-MIT © BiliMedia
+| 想做什么                                      | 命令/入口                                                                    |
+| --------------------------------------------- | ---------------------------------------------------------------------------- |
+| 修改前端后重新部署                           | `python deploy.py`（等 1-3 分钟 Vercel + Pages 自动重建）                   |
+| 验证三个入口是否都可用                       | `python deploy.py --health`                                                  |
+| 本地构建前端产物                              | 根目录执行 `npm run build`，产物在 `bilimedia-frontend/dist`                 |
+| 本地启动 dev server                           | `vercel dev` 或（前后端分离）两个 `npm start / npm run dev`                 |
+| 修改 Deno 反代 URL                            | 改 `bilimedia-frontend/src/services/api.ts` 的 `DENO_PROXY_ORIGIN`           |
+| 检查 Vercel 部署日志                          | https://vercel.com/bili-media/bili-media/deployments                         |
+| 检查 Pages 工作流运行日志                     | https://github.com/RoderickWilliams/BiliMedia/actions/workflows/deploy-pages.yml |
