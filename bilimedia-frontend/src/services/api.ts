@@ -1,23 +1,29 @@
 import axios from 'axios';
 
-// ============ 基础：动态 API Base（保持与旧版一致） ============
-const VERCEL_API_BASE = 'https://bili-media.vercel.app/api';
+// ============ 基础：动态 API Base ============
+// 优先级：构建时 VITE_API_ORIGIN > 同源 /api > Vercel 兜底
+const VERCEL_ORIGIN = 'https://bili-media.vercel.app';
+const ENV_API_ORIGIN = (import.meta as any).env?.VITE_API_ORIGIN || '';
 
-function resolveApiBase(): string {
-  if (typeof window === 'undefined') return '/api';
+function resolveApiOrigin(): string {
+  if (ENV_API_ORIGIN) return ENV_API_ORIGIN.replace(/\/+$/, '');
+  if (typeof window === 'undefined') return '';
   const host = window.location.hostname || '';
   if (
     host === 'localhost' ||
     host === '127.0.0.1' ||
     host.endsWith('.vercel.app') ||
-    host === 'bili-media.vercel.app'
+    host === 'bili-media.vercel.app' ||
+    host.endsWith('.tcloudbaseapp.com') ||
+    host.endsWith('.run.tencentcloudapi.com')
   ) {
-    return '/api';
+    return '';
   }
-  return VERCEL_API_BASE;
+  return VERCEL_ORIGIN;
 }
 
-export const API_BASE = resolveApiBase();
+const API_ORIGIN = resolveApiOrigin();
+export const API_BASE = API_ORIGIN ? `${API_ORIGIN}/api` : '/api';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -130,16 +136,16 @@ export function buildVideoDownloadUrl(params: {
   q.set('cid', String(params.cid));
   q.set('qn', String(params.qn));
   if (params.filename) q.set('filename', params.filename);
-  const path = `/api/download/video?${q.toString()}`;
-  return API_BASE === '/api' ? path : `https://bili-media.vercel.app${path}`;
+  const path = `/download/video?${q.toString()}`;
+  return `${API_BASE}${path}`;
 }
 
 export function buildMusicDownloadUrl(url: string, name: string) {
   const q = new URLSearchParams();
   q.set('url', encodeURIComponent(url));
   q.set('name', name);
-  const path = `/api/download/music?${q.toString()}`;
-  return API_BASE === '/api' ? path : `https://bili-media.vercel.app${path}`;
+  const path = `/download/music?${q.toString()}`;
+  return `${API_BASE}${path}`;
 }
 
 // ============ 账号：注册 / 登录 ============

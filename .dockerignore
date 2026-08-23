@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+**/dist
+**/.git
+.git
+.github
+.env
+.env.*
+*.log
+.DS_Store
+bilimedia-frontend/dist
+bilimedia-backend/dist
+bilimedia-backend/data
+.vercel

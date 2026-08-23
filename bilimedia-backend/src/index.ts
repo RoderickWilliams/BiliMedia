@@ -8,6 +8,8 @@ import path from 'path';
 import parseRouter from './routes/parse';
 import recognizeRouter from './routes/recognize';
 import downloadRouter from './routes/download';
+import authRouter from './routes/auth';
+import dataRouter from './routes/data';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -25,9 +27,13 @@ app.get('/health', (_req, res) => {
 app.use('/api/parse', parseRouter);
 app.use('/api/recognize', recognizeRouter);
 app.use('/api/download', downloadRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/data', dataRouter);
 
-// 如果前端 build 了 dist，可挂到后端同域提供（可选）
-const FE_DIST = path.resolve(__dirname, '../../bilimedia-frontend/dist');
+// 静态前端（可选：部署时挂载 dist；Docker 中通过 BILIMEDIA_FRONTEND_DIST 指定）
+const FE_DIST = process.env.BILIMEDIA_FRONTEND_DIST
+  ? path.resolve(process.env.BILIMEDIA_FRONTEND_DIST)
+  : path.resolve(__dirname, '../../bilimedia-frontend/dist');
 try {
   const fs = require('fs');
   if (fs.existsSync(FE_DIST)) {
@@ -43,7 +49,12 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(500).json({ ok: false, message: err?.message || 'Internal Server Error' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ BiliMedia Backend 已启动: http://localhost:${PORT}`);
-  console.log(`   网易云 API 依赖: ${process.env.NETEASE_API_BASE || 'http://localhost:3000'}`);
-});
+// 腾讯云 CloudBase / 云函数需要导出 app
+export default app;
+
+// 直接运行时启动监听
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`BiliMedia Backend 已启动: http://localhost:${PORT}`);
+  });
+}
