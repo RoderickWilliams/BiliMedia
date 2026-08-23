@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "buildCommand": "npm --prefix bilimedia-frontend install --no-audit --no-fund && npm run build",
+  "installCommand": "npm install --no-audit --no-fund",
+  "outputDirectory": "bilimedia-frontend/dist",
+  "framework": null,
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/api/auth/register", "destination": "/api/auth/register" },
+    { "source": "/api/auth/login", "destination": "/api/auth/login" },
+    { "source": "/api/parse", "destination": "/api/parse" },
+    { "source": "/api/recognize", "destination": "/api/recognize" },
+    { "source": "/api/data", "destination": "/api/data" },
+    { "source": "/api/download/video", "destination": "/api/download/video" },
+    { "source": "/api/download/music", "destination": "/api/download/music" },
+    { "source": "/((?!api).*)", "destination": "/index.html" }
+  ]
+}
