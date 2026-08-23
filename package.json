@@ -4,8 +4,10 @@
   "description": "BiliMedia - B站视频解析下载 & 网易云音乐识别 SaaS",
   "private": true,
   "license": "MIT",
+  "engines": {
+    "node": "22.x"
+  },
   "dependencies": {
-    "@vercel/node": "^5.10.2",
     "axios": "^1.7.9"
   },
   "devDependencies": {
