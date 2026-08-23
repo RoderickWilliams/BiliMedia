@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "mt5gbzmi1ri711",
+    "username": "e2etest",
+    "email": "e2e@test.com",
+    "passwordHash": "e785aee29f89802432a6d40d8a86d2820c0f3f122c027e7dc52d3ecae5f4469e",
+    "salt": "6d45427025927218",
+    "createdAt": 1787468061978
+  }
+]
