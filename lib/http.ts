@@ -14,6 +14,7 @@ export function fail(res: VercelResponse, status: number, message: string, extra
   return res.status(status).json({ ok: false, message, ...extra });
 }
 
+/** 解析 Authorization: Bearer <token> */
 export function parseBearerToken(req: VercelRequest): string | null {
   const h = req.headers['authorization'] || req.headers['Authorization'];
   const header = Array.isArray(h) ? h[0] : (h as string | undefined);
