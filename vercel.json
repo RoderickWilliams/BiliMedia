@@ -10,13 +10,37 @@
     }
   },
   "rewrites": [
-    { "source": "/api/auth/register", "destination": "/api/auth/register" },
-    { "source": "/api/auth/login", "destination": "/api/auth/login" },
-    { "source": "/api/parse", "destination": "/api/parse" },
-    { "source": "/api/recognize", "destination": "/api/recognize" },
-    { "source": "/api/data", "destination": "/api/data" },
-    { "source": "/api/download/video", "destination": "/api/download/video" },
-    { "source": "/api/download/music", "destination": "/api/download/music" },
-    { "source": "/((?!api).*)", "destination": "/index.html" }
+    {
+      "source": "/api/auth/register",
+      "destination": "/api/auth/register"
+    },
+    {
+      "source": "/api/auth/login",
+      "destination": "/api/auth/login"
+    },
+    {
+      "source": "/api/parse",
+      "destination": "/api/parse"
+    },
+    {
+      "source": "/api/recognize",
+      "destination": "/api/recognize"
+    },
+    {
+      "source": "/api/data",
+      "destination": "/api/data"
+    },
+    {
+      "source": "/api/download/video",
+      "destination": "/api/download/video"
+    },
+    {
+      "source": "/api/download/music",
+      "destination": "/api/download/music"
+    },
+    {
+      "source": "/((?!api).*)",
+      "destination": "/index.html"
+    }
   ]
 }
