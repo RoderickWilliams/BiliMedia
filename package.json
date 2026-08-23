@@ -1,0 +1,25 @@
+{
+  "name": "bilimedia",
+  "version": "1.0.0",
+  "description": "BiliMedia - B站视频解析下载 & 网易云音乐识别 SaaS",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "build": "cd bilimedia-frontend && npm run build",
+    "install:frontend": "cd bilimedia-frontend && npm install",
+    "install:backend": "cd bilimedia-backend && npm install",
+    "install:all": "npm install && npm run install:frontend && npm run install:backend || true",
+    "build:all": "npm run build",
+    "dev:frontend": "cd bilimedia-frontend && npm run dev",
+    "dev:backend": "cd bilimedia-backend && npm start",
+    "start": "npm run dev:backend"
+  },
+  "dependencies": {
+    "@vercel/node": "^5.10.2",
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3"
+  }
+}
